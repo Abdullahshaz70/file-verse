@@ -7,9 +7,9 @@ The following defines how data is physically laid out and managed within the sin
 
 The entire .omni file is a contiguous block of data, logically divided into three main areas after the fixed-size OMNIHeader and User Table (which stores UserInfo structs):
 
-- **Metadata Index Area**: Stores the fixed-size structure for every file and directory in the system.
+Content- **Metadata Index Area**: Stores the fixed-size structure for every file and directory in the system.
 - **Free Space Tracking Area**: A simple map or list that tracks whether each unit of storage is used or free.
-- **Content Block Area**: Stores the actual file data and directory listings.
+- ** Block Area**: Stores the actual file data and directory listings.
 
 ### Pointers and Addressing
 
