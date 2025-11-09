@@ -1,20 +1,31 @@
-### 1. User Management Structure
+## 1. User Management Structure
 
-Each user is represented by:
-- username: string
-- password: string (hashed)
-- isAdmin: boolean
+### Overview
+The User Management system is implemented using a **self-balancing AVL Tree**.  
+Each user is represented as a node in the tree, uniquely identified by their username.
 
-To store users, a **self-balanced binary search tree (AVL Tree)** is used.
-This structure provides O(log n) insertion, deletion, and search,
-which keeps authentication and user lookup fast even as the number of users grows.
+### Node Fields
+- **userName (string):** Unique identifier for each user.
+- **password (string):** User password (plain for now; can be hashed later).
+- **isAdmin (bool):** Flag that marks administrator accounts.
+- **left / right (UserNode*):** Pointers to left and right child nodes.
+- **height (int):** Node height, used to calculate balance factors.
 
-Although AVL trees require slightly more memory per node than arrays or vectors,
-the total overhead is minimal because the user list is small relative to the
-overall .omni file size. The tradeoff of a few extra pointers per node is worth
-the logarithmic time performance for add/remove/authenticate operations.
+### Operations
+- **addUser(username, password, isAdmin):** Inserts a new node while maintaining AVL balance.
+- **authenticate(username, password):** Searches for a user and verifies credentials.
+- **removeUser(username):** Deletes a node and rebalances the tree.
+- **print():** Performs an in-order traversal to list users alphabetically.
 
-The tree can later be serialized into the .omni file for persistence.
+### Design Rationale
+An AVL Tree was chosen because it guarantees O(log n) lookup, insertion,  
+and deletion. User operations like authentication and registration require  
+fast search and insertion. While it uses slightly more memory due to  
+pointers and height fields, the trade-off for performance and consistency  
+is acceptable given the small number of users in the OFS system.
+
+Memory cleanup is handled through a recursive destructor that deletes  
+all nodes when the UserManager instance is destroyed.
 
 
 
