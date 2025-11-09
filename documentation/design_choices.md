@@ -31,6 +31,23 @@ all nodes when the UserManager instance is destroyed.
 
 ## 2. Directory Tree Structure
 
+### Overview
+The Directory Tree represents the hierarchical structure of all files and folders
+within the Omni File System (OFS). It allows fast traversal, creation, and deletion
+of directories and files using path-based access (e.g., `/Documents/Notes.txt`).
+
+### Structure Design
+Each node in the tree is represented by the following structure:
+
+```cpp
+struct FileNode {
+    ing me;                
+    bool isFile;                     
+    string data;                
+    FileNode* parent;           
+    vector<FileNode*> children; 
+};
+
 ## 3. Free Space Management
 
 ## 4. Path-to-Location Mapping
