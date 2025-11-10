@@ -155,7 +155,7 @@ int main5() {
     return 0;
 }
 
-int main(){
+int main6(){
     FileIOManager io;
     io.createOmniFile("filesystem.omni", 1024*1024, 4096);
     io.openFile("filesystem.omni", 4096);
@@ -174,12 +174,37 @@ int main(){
 
 }
 
+int main7() {
+    cout << "Starting OFSCore persistent test...\n";
+
+    OFSCore ofs(20);
+
+    int choice;
+    cout << "1. Format new OFS\n";
+    cout << "2. Load existing OFS\n";
+    cout << "Enter choice: ";
+    cin >> choice;
+
+    if (choice == 1) {
+        ofs.format();   
+    } else {
+        ofs.loadSystem();  
+    }
+
+    cout << "\nOperation completed successfully.\n";
+    return 0;
+}
 
 
 
 
-
-
-
+int main() {
+    cout << "1. Format new OFS\n";
+    cout << "2. Load existing OFS\n";
+    int c; cin >> c;
+    OFSCore ofs(20);
+    if (c == 1) ofs.format();
+    else ofs.loadSystem();
+}
 
 

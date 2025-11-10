@@ -103,4 +103,52 @@ public:
             cout << "Closed .omni file: " << fileName << endl;
         }
     }
+
+    bool writeUsers(const vector<UserInfo>& users, uint64_t offset) {
+        if (!file.is_open()) return false;
+        file.seekp(offset, ios::beg);
+        for (const auto& user : users)
+            file.write(reinterpret_cast<const char*>(&user), sizeof(UserInfo));
+        file.flush();
+        cout << "User table written successfully.\n";
+        return true;
+    }
+
+    bool readUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
+        if (!file.is_open()) return false;
+        users.resize(count);
+        file.seekg(offset, ios::beg);
+        for (uint32_t i = 0; i < count; ++i)
+            file.read(reinterpret_cast<char*>(&users[i]), sizeof(UserInfo));
+        cout << "User table read successfully.\n";
+        return true;
+    }
+
+    bool writeFreeMap(const vector<bool>& freeMap, uint64_t offset) {
+        if (!file.is_open()) return false;
+        file.seekp(offset, ios::beg);
+        for (bool bit : freeMap) {
+            char value = bit ? 1 : 0;
+            file.write(&value, 1);
+        }
+        file.flush();
+        cout << "Free space map written.\n";
+        return true;
+    }
+
+    bool readFreeMap(vector<bool>& freeMap, uint64_t offset, uint32_t count) {
+        if (!file.is_open()) return false;
+        freeMap.clear();
+        file.seekg(offset, ios::beg);
+        for (uint32_t i = 0; i < count; ++i) {
+            char value;
+            file.read(&value, 1);
+            freeMap.push_back(value);
+        }
+        cout << "Free space map read.\n";
+        return true;
+    }
+
+
+
 };

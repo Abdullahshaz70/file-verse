@@ -6,6 +6,8 @@
 #include "../../data_structures/directory_tree.hpp"
 #include "../../data_structures/free_space.hpp"
 #include "odf_types.hpp"   
+#include "file_io_manager.hpp"
+
 
 using namespace std;
 
@@ -20,6 +22,10 @@ private:
     OMNIHeader header;
     FSStats stats;
     bool isInitialized;     
+
+    FileIOManager fileManager;
+    string omniFileName = "filesystem.omni";
+
 
 public:
    
@@ -36,14 +42,125 @@ public:
 
    
     
-    void format() {
-        cout << "Formatting OFS..." << endl;
-        spaceManager.reset();
-        dirTree.reset();        
-        isInitialized = true;
+    // void format() {
+    //     cout << "Formatting OFS..." << endl;
+    //     spaceManager.reset();
+    //     dirTree.reset();        
+    //     isInitialized = true;
     
 
+    // }
+
+    void format() {
+        cout << "Formatting OFS..." << endl;
+
+        spaceManager.reset();
+        dirTree.reset();
+
+        uint64_t totalSize = 1024 * 1024;   
+        uint64_t blockSize = 4096;
+
+        fileManager.createOmniFile(omniFileName, totalSize, blockSize);
+        fileManager.openFile(omniFileName, blockSize);
+
+        OMNIHeader header(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+        strcpy(header.magic, "OMNIFS01");
+        strcpy(header.student_id, "2022-CS-7062");
+        strcpy(header.submission_date, "2025-11-09");
+
+        fileManager.writeHeader(header);
+
+        vector<UserInfo> emptyUsers(10); 
+        uint64_t userTableOffset = sizeof(OMNIHeader);
+        fileManager.writeUsers(emptyUsers, userTableOffset);
+
+        vector<bool> freeMap(256, false); 
+        uint64_t freeMapOffset = userTableOffset + (emptyUsers.size() * sizeof(UserInfo));
+        fileManager.writeFreeMap(freeMap, freeMapOffset);
+
+        fileManager.closeFile();
+
+        isInitialized = true;
+        cout << "OFS formatted and .omni file created successfully.\n";
     }
+
+
+        bool loadSystem() {
+        cout << "Loading OFS from " << omniFileName << "...\n";
+        uint64_t blockSize = 4096;
+
+
+        if (!fileManager.openFile(omniFileName, blockSize)) {
+            cerr << "Error: Could not open .omni file. Please format first.\n";
+            return false;
+        }
+
+        OMNIHeader header;
+        if (!fileManager.readHeader(header)) {
+            cerr << "Error reading header.\n";
+            return false;
+        }
+
+        cout << "Loaded OMNI file successfully.\n";
+        cout << "Magic: " << header.magic << endl;
+        cout << "Total Size: " << header.total_size << " bytes\n";
+        cout << "Block Size: " << header.block_size << " bytes\n";
+        cout << "Student ID: " << header.student_id << "\n";
+        cout << "Submission Date: " << header.submission_date << "\n";
+
+        
+        
+        
+        vector<UserInfo> loadedUsers;
+        uint64_t userTableOffset = sizeof(OMNIHeader);
+        fileManager.readUsers(loadedUsers, userTableOffset, 10);
+
+        cout << "\n--- Loaded Users ---\n";
+        for (const auto& u : loadedUsers) {
+            if (u.is_active)
+                cout << "Username: " << u.username
+                     << " | Role: " << (u.role == UserRole::ADMIN ? "Admin" : "User") << "\n";
+        }
+
+        vector<bool> loadedMap;
+        uint64_t freeMapOffset = userTableOffset + (loadedUsers.size() * sizeof(UserInfo));
+        fileManager.readFreeMap(loadedMap, freeMapOffset, 256);
+
+        cout << "\nFree Blocks Available: "
+             << count(loadedMap.begin(), loadedMap.end(), false) << "\n";
+
+        fileManager.closeFile();
+        isInitialized = true;
+        return true;
+    }
+
+    // bool loadSystem() {
+    //     cout << "Loading OFS from " << omniFileName << "...\n";
+    //     uint64_t blockSize = 4096;
+
+    //     if (!fileManager.openFile(omniFileName, blockSize)) {
+    //         cerr << "Error: Could not open .omni file. Format first.\n";
+    //         return false;
+    //     }
+
+    //     OMNIHeader header;
+    //     if (!fileManager.readHeader(header)) {
+    //         cerr << "Error reading header.\n";
+    //         return false;
+    //     }
+
+    //     cout << "Loaded OMNI file successfully.\n";
+    //     cout << "Format version: " << header.format_version << "\n";
+    //     cout << "Total size: " << header.total_size << " bytes\n";
+    //     cout << "Block size: " << header.block_size << " bytes\n";
+    //     cout << "Student ID: " << header.student_id << "\n";
+    //     cout << "Submission Date: " << header.submission_date << "\n";
+
+    //     fileManager.closeFile();
+    //     isInitialized = true;
+    //     return true;
+    // }
+
     
     void createUser(const string& username, const string& password, bool isAdmin){
         userManager.addUser(username , password , isAdmin);
@@ -72,6 +189,7 @@ public:
     void printStats() const{
         spaceManager.print();
     }                         
+    
     bool isSystemReady() const { return isInitialized; }
 
 };
