@@ -1,6 +1,8 @@
 #include<iostream>
+
 #include"user_manager.hpp"
 #include"directory_tree.hpp"
+#include"free_space.hpp"
 
 using namespace std;
 
@@ -23,12 +25,7 @@ int main1() {
     return 0;
 }
 
-
-
-
-
-
-int main() {
+int main2() {
     DirectoryTree dt;
 
     
@@ -66,6 +63,29 @@ int main() {
 }
 
 
+
+int main() {
+    FreeSpace fsm(20); 
+
+    cout << "Initial free count: " << fsm.getFreeCount() << "\n";
+    fsm.print();
+
+    int b1 = fsm.allocateBlock();
+    int b2 = fsm.allocateBlock();
+    int b3 = fsm.allocateBlock();
+
+    cout << "\nAllocated blocks: " << b1 << ", " << b2 << ", " << b3 << "\n";
+    cout << "Free count: " << fsm.getFreeCount() << "\n";
+    fsm.print();
+
+    fsm.freeBlock(b2);
+    cout << "\nAfter freeing block " << b2 << ":\n";
+    fsm.print();
+
+    fsm.reset();
+    cout << "\nAfter format (all free again):\n";
+    fsm.print();
+}
 
 
 
