@@ -9,8 +9,13 @@ class FreeSpace{
     int totalBlocks;
 
 public:
-    FreeSpace(int _totalBlocks):totalBlocks(_totalBlocks) , memory(totalBlocks , true){}
-    ~FreeSpace(){reset();}
+    FreeSpace(int totalBlocks)
+    : totalBlocks(totalBlocks), memory(totalBlocks, true) {}
+
+    ~FreeSpace(){
+        // cout << "[Debug] FreeSpaceManager destructor called\n";
+        reset();
+    }
     int allocateBlock(){
         for (int i = 0; i < totalBlocks; ++i) {
         if (memory[i]) {

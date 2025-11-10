@@ -66,17 +66,27 @@ class DirectoryTree{
 
     }
 
-    void deleteNodeRec(FileNode* node) {
-        for (FileNode* child : node->children)
+    void deleteNodeRec(FileNode* node){
+        if (!node) return; 
+        for (auto* child : node->children)
             deleteNodeRec(child);
+        node->children.clear(); 
         delete node;
     }
+
+    
+
+
 
 
 public:
 
     DirectoryTree():root(nullptr){root = new FileNode("root", false, nullptr); }
-    ~DirectoryTree() { deleteNodeRec(root); }
+    ~DirectoryTree() { 
+        // cout << "[Debug] DirectoryTree destructor called\n";
+        deleteNodeRec(root);
+        root = nullptr;
+    }
 
 
     bool createDirectory(const string& path , const string& name){
@@ -174,6 +184,11 @@ public:
 
 
     FileNode* getRoot() { return root; }
+
+    void reset() {
+        deleteNodeRec(root);
+        root = new FileNode("root", false, nullptr);
+    }
 
 
 };

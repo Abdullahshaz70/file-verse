@@ -198,7 +198,10 @@ class UserManager{
 
 public:
     UserManager():root(nullptr){}
-    ~UserManager(){deleteTree(root);}
+    ~UserManager(){
+        // cout << "[Debug] UserManager destructor called\n";
+        deleteTree(root);
+    }
 
  
 

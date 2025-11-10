@@ -1,8 +1,6 @@
 #include<iostream>
+#include "../include/core/OFSCore.hpp"
 
-#include"user_manager.hpp"
-#include"directory_tree.hpp"
-#include"free_space.hpp"
 
 using namespace std;
 
@@ -62,9 +60,7 @@ int main2() {
     return 0;
 }
 
-
-
-int main() {
+int main3() {
     FreeSpace fsm(20); 
 
     cout << "Initial free count: " << fsm.getFreeCount() << "\n";
@@ -85,10 +81,35 @@ int main() {
     fsm.reset();
     cout << "\nAfter format (all free again):\n";
     fsm.print();
+
+    return 0;
 }
 
 
 
+int main() {
+    cout << "Starting program..." << endl;
+    OFSCore ofs(20);
+
+    cout << "Calling format..." << endl;
+    ofs.format();
+
+    cout << "Creating user..." << endl;
+    ofs.createUser("admin", "123", true);
+
+    cout << "Logging in..." << endl;
+    ofs.login("admin", "123");
+
+    cout << "Creating file..." << endl;
+    ofs.createFile("/", "readme.txt", "Welcome to OFS!");
+
+    cout << "Listing directory..." << endl;
+    ofs.listDirectory("/");
+
+    cout << "All done!" << endl;
+
+    return 0;
+}
 
 
 
