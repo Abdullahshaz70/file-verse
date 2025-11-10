@@ -1,5 +1,6 @@
 #include<iostream>
 #include "../include/core/OFSCore.hpp"
+#include "../include/core/file_io_manager.hpp"
 
 
 using namespace std;
@@ -85,9 +86,7 @@ int main3() {
     return 0;
 }
 
-
-
-int main() {
+int main4() {
     cout << "Starting program..." << endl;
     OFSCore ofs(20);
 
@@ -110,6 +109,77 @@ int main() {
 
     return 0;
 }
+
+
+
+int main5() {
+    cout << "Starting FileIOManager test..." << endl;
+
+    const uint64_t totalSize = 1024 * 1024;
+    const uint64_t blockSize = 4096;
+
+    FileIOManager io;
+
+    if (!io.createOmniFile("filesystem.omni", totalSize, blockSize)) {
+        cerr << "Failed to create .omni file!" << endl;
+        return 1;
+    }
+
+    if (!io.openFile("filesystem.omni", blockSize)) {
+        cerr << "Failed to open .omni file!" << endl;
+        return 1;
+    }
+
+    OMNIHeader header(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+    strcpy(header.magic, "OMNIFS01");
+    strcpy(header.student_id, "2022-CS-7062");
+    strcpy(header.submission_date, "2025-11-09");
+
+    io.writeHeader(header);
+
+    OMNIHeader readHeader;
+    io.readHeader(readHeader);
+
+    cout << "\n--- Header Verification ---\n";
+    cout << "Magic: " << readHeader.magic << endl;
+    cout << "Format Version: " << readHeader.format_version << endl;
+    cout << "Total Size: " << readHeader.total_size << " bytes" << endl;
+    cout << "Block Size: " << readHeader.block_size << " bytes" << endl;
+    cout << "Student ID: " << readHeader.student_id << endl;
+    cout << "Submission Date: " << readHeader.submission_date << endl;
+    cout << "---------------------------\n";
+
+    io.closeFile();
+
+    cout << "\nFileIOManager test completed successfully!\n";
+    return 0;
+}
+
+int main(){
+    FileIOManager io;
+    io.createOmniFile("filesystem.omni", 1024*1024, 4096);
+    io.openFile("filesystem.omni", 4096);
+
+    OMNIHeader header(0x00010000, 1024*1024, sizeof(OMNIHeader), 4096);
+    strcpy(header.magic, "OMNIFS01");
+    strcpy(header.student_id, "2022-CS-7062");
+    strcpy(header.submission_date, "2025-11-09");
+
+    io.writeHeader(header);
+    OMNIHeader verify;
+    io.readHeader(verify);
+    io.closeFile();
+
+    return 0;
+
+}
+
+
+
+
+
+
+
 
 
 
