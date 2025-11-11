@@ -196,7 +196,7 @@ int main7() {
 }
 
 
-int main() {
+int main8() {
     cout << "1. Format new OFS\n";
     cout << "2. Load existing OFS\n";
     int choice; cin >> choice;
@@ -210,6 +210,20 @@ int main() {
     return 0;
 }
 
+int main() {
+    OFSCore ofs(20);
+
+    cout << "1. Format new OFS\n";
+    cout << "2. Load existing OFS\n";
+    cout << "3. Write sample file data\n";
+    cout << "4. Read sample file data\n";
+    int choice; cin >> choice;
+
+    if (choice == 1) ofs.format();
+    else if (choice == 2) ofs.loadSystem();
+    else if (choice == 3) ofs.writeFileContent("/Documents/readme.txt", "Hello Abdullah! This is real data inside the .omni file.");
+    else if (choice == 4) ofs.readFileContent(0, 50);
+}
 
 
 

@@ -169,6 +169,33 @@ public:
         cout << "Directory metadata read successfully.\n";
         return true;
     }
+    
+    bool writeFileData(uint64_t dataRegionOffset, uint32_t blockIndex, uint64_t blockSize, const vector<char>& data) {
+        if (!file.is_open()) {
+            cerr << "Error: .omni file not open for write.\n";
+            return false;
+        }
+
+
+        file.seekp(dataRegionOffset + (blockIndex * blockSize), ios::beg);
+        file.write(data.data(), min<uint64_t>(data.size(), blockSize));
+        file.flush();
+        cout << "Wrote " << data.size() << " bytes to block #" << blockIndex << endl;
+        return true;
+    }
+
+    bool readFileData(uint64_t dataRegionOffset, uint32_t blockIndex, uint64_t blockSize, vector<char>& outData) {
+        if (!file.is_open()) {
+            cerr << "Error: .omni file not open for read.\n";
+            return false;
+        }
+
+        outData.resize(blockSize);
+        file.seekg(dataRegionOffset + (blockIndex * blockSize), ios::beg);
+        file.read(outData.data(), blockSize);
+        cout << "Read block #" << blockIndex << " from .omni file.\n";
+        return true;
+    }
 
 
 

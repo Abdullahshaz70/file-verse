@@ -26,6 +26,8 @@ private:
     FileIOManager fileManager;
     string omniFileName = "filesystem.omni";
 
+    uint64_t dataStartOffset = 0;
+
 
 public:
    
@@ -73,6 +75,9 @@ public:
         dirTree.exportToEntries(entries);   
         uint64_t metaOffset = freeMapOffset + freeMap.size();
         fileManager.writeFileEntries(entries, metaOffset);
+
+        dataStartOffset = metaOffset + (entries.size() * sizeof(FileEntry));
+
 
         fileManager.closeFile();
 
@@ -172,5 +177,46 @@ public:
     }                         
     
     bool isSystemReady() const { return isInitialized; }
+
+
+
+    bool writeFileContent(const string& filePath, const string& fileData) {
+        cout << "Writing file content for: " << filePath << endl;
+        fileManager.openFile(omniFileName, 4096);
+
+
+        int blockIndex = spaceManager.allocateBlock();
+        if (blockIndex == -1) {
+            cerr << "No free space available.\n";
+            return false;
+        }
+
+        
+        vector<char> buffer(fileData.begin(), fileData.end());
+
+        
+        fileManager.writeFileData(dataStartOffset, blockIndex, 4096, buffer);
+        vector<bool> freeMap = spaceManager.getMap();
+        uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
+        fileManager.writeFreeMap(freeMap, freeMapOffset);
+
+        fileManager.closeFile();
+        cout << "File stored successfully at block #" << blockIndex << "\n";
+        return true;
+    }
+
+    bool readFileContent(uint32_t blockIndex, uint32_t dataLength) {
+        cout << "Reading data from block #" << blockIndex << endl;
+        fileManager.openFile(omniFileName, 4096);
+
+        vector<char> buffer;
+        fileManager.readFileData(dataStartOffset, blockIndex, 4096, buffer);
+        fileManager.closeFile();
+
+        string content(buffer.begin(), buffer.begin() + dataLength);
+        cout << "File content:\n" << content << endl;
+        return true;
+    }
+
 
 };

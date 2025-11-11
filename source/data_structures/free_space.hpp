@@ -61,6 +61,13 @@ public:
             memory[i] = true;
     }
 
+    vector<bool> getMap() const {
+        return memory;
+    }
+
+    void setMap(const vector<bool>& newMap) {
+        memory = newMap;
+    }
 
 };
 
