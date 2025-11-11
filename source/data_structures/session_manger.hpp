@@ -13,34 +13,36 @@ struct Session {
     int operations;
     bool active;
 
-    Session() : isAdmin(false), loginTime(0), operations(0), active(false) {}
+    Session() : username(""), isAdmin(false), loginTime(0), operations(0), active(false) {}
 };
 
 class SessionManager {
 private:
     Session current;
-    UserManager* userManager;   
+    UserManager* userManager;   // Pointer to UserManager tree
 
 public:
     SessionManager(UserManager* um) : userManager(um) {}
 
+    // -------------------------------
+    // LOGIN + LOGOUT
+    // -------------------------------
     bool login(const string& username, const string& password) {
         if (userManager->authenticate(username, password)) {
-            current.username = username;
             UserNode* node = userManager->getRoot();
             while (node) {
                 if (username == node->userName) {
+                    current.username = username;
                     current.isAdmin = node->isAdmin;
-                    break;
+                    current.loginTime = time(nullptr);
+                    current.operations = 0;
+                    current.active = true;
+                    cout << "🔓 Login successful for " << username
+                         << (current.isAdmin ? " (Admin)" : " (User)") << endl;
+                    return true;
                 }
                 node = (username < node->userName) ? node->left : node->right;
             }
-            current.loginTime = time(nullptr);
-            current.active = true;
-            current.operations = 0;
-            cout << "🔓 Login successful for " << username
-                 << (current.isAdmin ? " (Admin)" : " (User)") << endl;
-            return true;
         }
         cout << "❌ Invalid credentials for " << username << endl;
         return false;
@@ -49,20 +51,25 @@ public:
     void logout() {
         if (current.active) {
             cout << "👋 User " << current.username << " logged out.\n";
-            current = Session();
+            current = Session();  // reset
         } else {
             cout << "⚠️ No active session to logout.\n";
         }
     }
 
+    // -------------------------------
+    // OPERATIONS + STATUS
+    // -------------------------------
     void recordOperation() {
         if (current.active) current.operations++;
     }
 
-    bool isActive() const { return current.active; }
-    bool isAdminUser() const { return current.active && current.isAdmin; }
-    string getCurrentUser() const { return current.active ? current.username : "None"; }
+    // --- NEW Helper Accessors (used by OFSCore) ---
+    bool isLoggedIn() const { return current.active; }
+    bool isAdmin() const { return current.active && current.isAdmin; }
+    string getActiveUsername() const { return current.active ? current.username : "None"; }
 
+    // Optional: used to show current user info
     void printSession() const {
         if (!current.active) {
             cout << "No active session.\n";

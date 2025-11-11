@@ -60,14 +60,20 @@ public:
     // =============================================================
     OFSCore(int blocks = 2048)
     : spaceManager(blocks), totalBlocks(blocks),
-      isInitialized(false), sessionManager(&userManager) {
-        uint64_t blockSize = 4096;
-        uint64_t totalSize = blocks * blockSize;
-        header = OMNIHeader();
-        stats = FSStats(totalSize, 0, totalSize);
-        cout << "OFSCore initialized with " << totalBlocks
-             << " blocks (" << totalSize / 1024 << " KB)." << endl;
-    }
+      isInitialized(false), sessionManager(&userManager)
+{
+    uint64_t blockSize = 4096;
+    uint64_t totalSize = blocks * blockSize;
+    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+    stats = FSStats(totalSize, 0, totalSize);
+
+    
+    userManager.addUser("admin", "admin123", true);
+    cout << "Default admin (admin / admin123) created.\n";
+
+    cout << "OFSCore initialized with " << blocks
+         << " blocks (" << totalSize / 1024 << " KB)." << endl;
+}
 
     ~OFSCore() { cout << "OFSCore shutting down." << endl; }
 
@@ -75,72 +81,50 @@ public:
     // 🧾 FORMAT OFS
     // =============================================================
     void format() {
-        cout << "\nFormatting OFS...\n";
-        spaceManager.reset();
-        dirTree.reset();
-
-        uint64_t totalSize = totalBlocks * 4096;
-        uint64_t blockSize = 4096;
-
-        // 1️⃣ Create blank .omni file
-        fileManager.createOmniFile(omniFileName, totalSize, blockSize);
-        fileManager.openFile(omniFileName, blockSize);
-
-        // 2️⃣ Initialize header
-        header.format_version = 0x00010000;
-        header.total_size = totalSize;
-        header.header_size = sizeof(OMNIHeader);
-        header.block_size = blockSize;
-        strncpy(header.magic, "OMNIFS01", sizeof(header.magic));
-        strncpy(header.student_id, "2022-CS-7062", sizeof(header.student_id));
-        strncpy(header.submission_date, "2025-11-09", sizeof(header.submission_date));
-
-        vector<UserInfo> emptyUsers(10);
-        vector<bool> freeMap(totalBlocks, false);
-        vector<FileEntry> entries;
-        dirTree.exportToEntries(entries);
-
-        // 3️⃣ Calculate all offset positions
-        uint64_t offset = sizeof(OMNIHeader);
-        uint64_t userTableOffset = offset;
-        offset += emptyUsers.size() * sizeof(UserInfo);
-
-        uint64_t freeMapOffset = offset;
-        offset += freeMap.size();
-
-        uint64_t metaOffset = offset;
-        offset += entries.size() * sizeof(FileEntry);
-
-        dataStartOffset = offset;
-        uint64_t dataRegionSize = totalSize - dataStartOffset;
-
-        // Split remaining space for versions + changelog
-        uint64_t versionRegion = dataRegionSize * 0.95;
-        header.file_state_storage_offset = dataStartOffset + versionRegion;
-        header.change_log_offset = header.file_state_storage_offset + (100 * sizeof(VersionBlock));
-
-        // Debug breakdown
-        cout << "=== FORMAT DEBUG ===\n";
-        cout << "Header: 0 - " << sizeof(OMNIHeader)
-             << "\nUserTable: " << userTableOffset
-             << "\nFreeMap: " << freeMapOffset
-             << "\nFileEntries: " << metaOffset
-             << "\nDataRegionStart: " << dataStartOffset
-             << "\nVersionStorageOffset: " << header.file_state_storage_offset
-             << "\nChangeLogOffset: " << header.change_log_offset
-             << "\n====================\n";
-
-        // 4️⃣ Write header and tables
-        fileManager.writeHeader(header);
-        fileManager.writeUsers(emptyUsers, userTableOffset);
-        fileManager.writeFreeMap(freeMap, freeMapOffset);
-        fileManager.writeFileEntries(entries, metaOffset);
-
-        fileManager.closeFile();
-        cout << "✅ OFS formatted successfully.\n";
-        updateStats();
-        isInitialized = true;
+    if (!sessionManager.isLoggedIn()) {
+        cerr << "❌ Access Denied: Please log in as an Admin to format the system.\n";
+        return;
     }
+    if (!sessionManager.isAdmin()) {
+        cerr << "🛑 Access Denied: Only Admins can format the file system.\n";
+        return;
+    }
+
+    cout << "🧹 Formatting OFS...\n";
+    spaceManager.reset();
+    dirTree.reset();
+
+    uint64_t totalSize = totalBlocks * 4096;
+    uint64_t blockSize = 4096;
+
+    fileManager.createOmniFile(omniFileName, totalSize, blockSize);
+    fileManager.openFile(omniFileName, blockSize);
+
+    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+    strcpy(header.magic, "OMNIFS01");
+    strcpy(header.student_id, "2022-CS-7062");
+    strcpy(header.submission_date, "2025-11-09");
+
+    fileManager.writeHeader(header);
+
+    vector<UserInfo> emptyUsers(10);
+    uint64_t userTableOffset = sizeof(OMNIHeader);
+    fileManager.writeUsers(emptyUsers, userTableOffset);
+
+    vector<bool> freeMap(totalBlocks, false);
+    uint64_t freeMapOffset = userTableOffset + (emptyUsers.size() * sizeof(UserInfo));
+    fileManager.writeFreeMap(freeMap, freeMapOffset);
+
+    vector<FileEntry> entries;
+    dirTree.exportToEntries(entries);
+    uint64_t metaOffset = freeMapOffset + freeMap.size();
+    fileManager.writeFileEntries(entries, metaOffset);
+
+    fileManager.closeFile();
+    isInitialized = true;
+    cout << "✅ OFS formatted successfully by Admin.\n";
+    updateStats();
+}
 
     // =============================================================
     // 📂 LOAD EXISTING SYSTEM
@@ -177,46 +161,59 @@ public:
     // ✏️ WRITE FILE + CREATE VERSION ENTRY
     // =============================================================
     bool writeFileContent(const string& filePath, const string& fileData) {
-        cout << "\nWriting file content for: " << filePath << endl;
-
-        if (!fileManager.openFile(omniFileName, 4096)) return false;
-        int blockIndex = spaceManager.allocateBlock();
-        if (blockIndex == -1) {
-            cerr << "❌ No free space available.\n";
-            return false;
-        }
-
-        vector<char> buffer(fileData.begin(), fileData.end());
-        fileManager.writeFileData(dataStartOffset, blockIndex, 4096, buffer);
-
-        vector<bool> freeMap = spaceManager.getMap();
-        uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
-        fileManager.writeFreeMap(freeMap, freeMapOffset);
-
-        updateStats();
-        saveFileVersion(filePath, blockIndex);
-        logChange(filePath, "admin", "MODIFY", time(nullptr));
-
-        fileManager.closeFile();
-        cout << "✅ File stored successfully at block #" << blockIndex << endl;
-        return true;
+    if (!sessionManager.isLoggedIn()) {
+        cerr << "❌ Access Denied: You must be logged in to write files.\n";
+        return false;
     }
+
+    cout << "✏️ Writing file content as user: " << sessionManager.getActiveUsername() << endl;
+
+    fileManager.openFile(omniFileName, 4096);
+
+    int blockIndex = spaceManager.allocateBlock();
+    if (blockIndex == -1) {
+        cerr << "No free space available.\n";
+        return false;
+    }
+
+    vector<char> buffer(fileData.begin(), fileData.end());
+    fileManager.writeFileData(dataStartOffset, blockIndex, 4096, buffer);
+
+    vector<bool> freeMap = spaceManager.getMap();
+    uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
+    fileManager.writeFreeMap(freeMap, freeMapOffset);
+
+    updateStats();
+    sessionManager.recordOperation();
+
+    fileManager.closeFile();
+    cout << "✅ File stored successfully by user: " << sessionManager.getActiveUsername() << "\n";
+    return true;
+}
 
     // =============================================================
     // 📖 READ FILE DATA
     // =============================================================
     bool readFileContent(uint32_t blockIndex, uint32_t dataLength) {
-        cout << "Reading data from block #" << blockIndex << endl;
-        fileManager.openFile(omniFileName, 4096);
-
-        vector<char> buffer;
-        fileManager.readFileData(dataStartOffset, blockIndex, 4096, buffer);
-        fileManager.closeFile();
-
-        string content(buffer.begin(), buffer.begin() + dataLength);
-        cout << "File content:\n" << content << endl;
-        return true;
+    if (!sessionManager.isLoggedIn()) {
+        cerr << "❌ Access Denied: You must be logged in to read files.\n";
+        return false;
     }
+
+    cout << "📖 Reading data as user: " << sessionManager.getActiveUsername() << endl;
+
+    fileManager.openFile(omniFileName, 4096);
+
+    vector<char> buffer;
+    fileManager.readFileData(dataStartOffset, blockIndex, 4096, buffer);
+    fileManager.closeFile();
+
+    string content(buffer.begin(), buffer.begin() + dataLength);
+    cout << "📄 File content:\n" << content << endl;
+
+    sessionManager.recordOperation();
+    return true;
+}
 
     // =============================================================
     // 🪶 CHANGE LOG SYSTEM
@@ -330,6 +327,24 @@ public:
     void loginUser(const string& user, const string& pass) { sessionManager.login(user, pass); }
     void logoutUser() { sessionManager.logout(); }
     void showSession() const { sessionManager.printSession(); }
+
+    void createUser(const string& username, const string& password, bool isAdminFlag) {
+        if (!sessionManager.isLoggedIn()) {
+            cerr << "❌ Access Denied: You must be logged in as Admin to add new users.\n";
+            return;
+        }
+        if (!sessionManager.isAdmin()) {
+            cerr << "🛑 Access Denied: Only Admins can add new users.\n";
+            return;
+        }
+
+        if (userManager.addUser(username, password, isAdminFlag))
+            cout << "✅ User '" << username << "' added successfully.\n";
+        else
+            cout << "⚠️ Could not add user (maybe already exists?).\n";
+    }
+
+    UserManager& getUserManager() { return userManager; }
 
 
 

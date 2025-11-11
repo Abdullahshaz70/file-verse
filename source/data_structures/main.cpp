@@ -97,8 +97,6 @@ int main1() {
     return 0;
 }
 
-
-
 int main2() {
     UserManager um;
 
@@ -113,10 +111,7 @@ int main2() {
     return 0;
 }
 
-
-
-
-int main() {
+int main3() {
     cout << "=============================\n";
     cout << "👤 User + Session Manager Test\n";
     cout << "=============================\n\n";
@@ -161,6 +156,22 @@ int main() {
     return 0;
 }
 
+int main4() {
+    OFSCore ofs(256);
+    cout << "=== RBAC Test ===\n";
+
+    ofs.getUserManager().addUser("admin", "admin123", true);
+
+    ofs.loginUser("admin", "admin123"); 
+    ofs.createUser("user1", "userpass", false);
+    ofs.logoutUser();
+
+    ofs.loginUser("user1", "userpass");
+    ofs.format(); 
+    ofs.logoutUser();
+
+    cout << "✅ RBAC Test Done.\n";
+}
 
 
 
