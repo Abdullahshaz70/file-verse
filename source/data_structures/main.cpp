@@ -236,6 +236,9 @@ int main() {
     cout << "3. Write sample file data\n";
     cout << "4. Read sample file data\n";
     cout << "5. View system stats\n";
+    cout << "6. View change log\n";
+    cout << "7. Modify file & save version\n";
+
     int choice; cin >> choice;
 
     if (choice == 1) ofs.format();
@@ -243,6 +246,10 @@ int main() {
     else if (choice == 3) ofs.writeFileContent("/Documents/readme.txt", "This is a data block test for stats.");
     else if (choice == 4) ofs.readFileContent(0, 40);
     else if (choice == 5) ofs.printStats();
+    else if (choice == 6) ofs.showChangeLog();
+    else if (choice == 7) ofs.modifyFileVersion("/Documents/readme.txt",
+                   "Updated version content example.");
+
 }
 
 

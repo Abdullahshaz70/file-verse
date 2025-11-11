@@ -97,13 +97,7 @@ public:
         return true;
     }
 
-    void closeFile() {
-        if (file.is_open()) {
-            file.close();
-            cout << "Closed .omni file: " << fileName << endl;
-        }
-    }
-
+   
     bool writeUsers(const vector<UserInfo>& users, uint64_t offset) {
         if (!file.is_open()) return false;
         file.seekp(offset, ios::beg);
@@ -194,6 +188,56 @@ public:
         file.seekg(dataRegionOffset + (blockIndex * blockSize), ios::beg);
         file.read(outData.data(), blockSize);
         cout << "Read block #" << blockIndex << " from .omni file.\n";
+        return true;
+    }
+
+
+     void closeFile() {
+        if (file.is_open()) {
+            file.close();
+            cout << "Closed .omni file: " << fileName << endl;
+        }
+    }
+
+
+    bool writeChangeLog(const std::vector<ChangeLogEntry>& log, uint64_t offset) {
+        if (!file.is_open()) return false;
+        // file.seekp(offset, ios::beg);
+        file.seekp(0, ios::end);
+
+        for (const auto& entry : log) {
+            file.write(reinterpret_cast<const char*>(&entry), sizeof(ChangeLogEntry));
+        }
+        file.flush();
+        cout << "Change-log written successfully.\n";
+        return true;
+    }
+
+    bool readChangeLog(std::vector<ChangeLogEntry>& log, uint64_t offset, uint32_t count) {
+        if (!file.is_open()) return false;
+        log.resize(count);
+        file.seekg(offset, ios::beg);
+        for (uint32_t i = 0; i < count; ++i) {
+            file.read(reinterpret_cast<char*>(&log[i]), sizeof(ChangeLogEntry));
+        }
+        cout << "Change-log read successfully.\n";
+        return true;
+    }
+
+    bool writeVersionBlock(const VersionBlock& vb, uint64_t offset) {
+        if (!file.is_open()) return false;
+        file.seekp(offset, ios::beg);
+        file.write(reinterpret_cast<const char*>(&vb), sizeof(VersionBlock));
+        file.flush();
+        cout << "Version block written successfully.\n";
+        return true;
+    }
+
+    bool readVersionBlock(VersionBlock& vb, uint64_t offset) {
+        if (!file.is_open()) return false;
+        file.seekg(offset, ios::beg);
+        file.read(reinterpret_cast<char*>(&vb), sizeof(VersionBlock));
+        cout << "Version block read successfully.\n";
         return true;
     }
 

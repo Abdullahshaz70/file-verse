@@ -246,4 +246,34 @@ struct FSStats {
     }
 };
 
+
+/**
+ * Change Log Entry
+ * Used by Delta Vault to record file modifications
+ */
+struct ChangeLogEntry {
+    char filePath[256];
+    char user[32];
+    uint64_t timestamp;
+    char action[16];     // e.g. "CREATE", "MODIFY", "DELETE"
+    uint64_t versionID;
+
+    ChangeLogEntry() = default;
+};
+
+/**
+ * Version Block
+ * Stores version information for a file
+ */
+struct VersionBlock {
+    char filePath[256];
+    uint64_t versionID;
+    uint32_t startBlock;
+    uint32_t blockCount;
+    uint64_t timestamp;
+
+    VersionBlock() = default;
+};
+
+
 #endif // ODF_TYPES_HPP

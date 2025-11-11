@@ -33,6 +33,8 @@ private:
 
 
 
+
+
     void updateStats() {
     vector<bool> map = spaceManager.getMap();
     uint64_t used = count(map.begin(), map.end(), true);
@@ -107,6 +109,18 @@ public:
         freeMap.size() +
         (entries.size() * sizeof(FileEntry));
 
+
+        
+        header.file_state_storage_offset = dataStartOffset + (totalBlocks * header.block_size);
+        header.change_log_offset = header.file_state_storage_offset + (256 * sizeof(uint64_t));
+
+        
+        fileManager.openFile(omniFileName, 4096);
+        fileManager.writeHeader(header);
+        fileManager.closeFile();
+
+
+
     fileManager.closeFile();
 
     isInitialized = true;
@@ -153,7 +167,7 @@ public:
     vector<bool> loadedMap;
     uint64_t freeMapOffset = userTableOffset + (loadedUsers.size() * sizeof(UserInfo));
     fileManager.readFreeMap(loadedMap, freeMapOffset, totalBlocks);
-    spaceManager.setMap(loadedMap); // <-- important fix
+    spaceManager.setMap(loadedMap); 
 
     cout << "\nFree Blocks Available: "
          << count(loadedMap.begin(), loadedMap.end(), false) << "\n";
@@ -176,7 +190,7 @@ public:
 
     fileManager.closeFile();
     isInitialized = true;
-    updateStats(); // <-- after restoring map
+    updateStats(); 
     return true;
 }
 
@@ -235,6 +249,8 @@ public:
 
         fileManager.closeFile();
         cout << "File stored successfully at block #" << blockIndex << "\n";
+        logChange(filePath, "admin", "MODIFY", 1);
+
         return true;
     }
 
@@ -251,6 +267,25 @@ public:
         return true;
     }
 
+
+
+    void logChange(const string& path, const string& user, const string& action, uint64_t versionID) {
+        fileManager.openFile(omniFileName, 4096);
+
+        ChangeLogEntry entry;
+        strncpy(entry.filePath, path.c_str(), sizeof(entry.filePath) - 1);
+        strncpy(entry.user, user.c_str(), sizeof(entry.user) - 1);
+        strncpy(entry.action, action.c_str(), sizeof(entry.action) - 1);
+        entry.timestamp = time(nullptr);
+        entry.versionID = versionID;
+
+        fileManager.writeChangeLog({ entry }, header.change_log_offset);
+        fileManager.closeFile();
+    }
+
+
+
+
     void printStats() const {
         cout << "\n--- OFS Statistics ---\n";
         cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
@@ -262,4 +297,27 @@ public:
     }
 
 
+        void showChangeLog() {
+        vector<ChangeLogEntry> log;
+        fileManager.openFile(omniFileName, 4096);
+        fileManager.readChangeLog(log, header.change_log_offset, 10);
+        fileManager.closeFile();
+
+        cout << "\n--- Change Log ---\n";
+        for (auto& e : log) {
+            if (strlen(e.filePath) > 0) {
+                cout << e.filePath << " | " << e.action
+                     << " | " << e.user
+                     << " | v" << e.versionID
+                     << " | " << ctime((time_t*)&e.timestamp);
+            }
+        }
+    }
+    void modifyFileVersion(const string& path, const string& newData) {
+        writeFileContent(path, newData);
+        logChange(path, "admin", "MODIFY", 2);
+    }
+
+
 };
+
