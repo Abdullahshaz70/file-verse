@@ -46,16 +46,16 @@ public:
     // =====================================================
     //  Open file for read/write
     // =====================================================
-    bool openFile(const string& name, uint64_t blockSz) {
-        fileName = name;
-        blockSize = blockSz;
-        file.open(fileName, ios::in | ios::out | ios::binary);
-        if (!file.is_open()) {
-            cerr << "❌ Error: Could not open " << fileName << endl;
-            return false;
-        }
-        return true;
+    bool openFile(const string& path, uint64_t blockSize) {
+    if (file.is_open()) file.close();
+    file.open(path, ios::in | ios::out | ios::binary);  // ✅ read + write
+    if (!file.is_open()) {
+        cerr << "❌ Could not open file: " << path << endl;
+        return false;
     }
+    this->blockSize = blockSize;
+    return true;
+}
 
     // =====================================================
     //  Write header safely (always from start)
@@ -93,33 +93,30 @@ public:
     //  Safe header read (always resets pointer to start)
     // =====================================================
     bool readHeader(OMNIHeader& outHeader) {
-        // Always close existing state and reopen fresh for consistent read
-        if (file.is_open()) file.close();
-        file.open(fileName, ios::in | ios::binary);
+    if (!file.is_open()) {
+        file.open(fileName, ios::in | ios::out | ios::binary);
         if (!file.is_open()) {
             cerr << "❌ Error: Could not open " << fileName << " for reading header.\n";
             return false;
         }
-
-        file.seekg(0, ios::beg);
-        file.read(reinterpret_cast<char*>(&outHeader), sizeof(OMNIHeader));
-
-        if (file.gcount() != sizeof(OMNIHeader)) {
-            cerr << "❌ Error: Incomplete header read.\n";
-            file.close();
-            return false;
-        }
-
-        if (strcmp(outHeader.magic, "OMNIFS01") != 0) {
-            cerr << "❌ ERROR: Invalid header magic read ('" << outHeader.magic << "').\n";
-            file.close();
-            return false;
-        }
-
-        cout << "✅ Header read successfully (Verified).\n";
-        file.close();
-        return true;
     }
+
+    file.seekg(0, ios::beg);
+    file.read(reinterpret_cast<char*>(&outHeader), sizeof(OMNIHeader));
+
+    if (file.gcount() != sizeof(OMNIHeader)) {
+        cerr << "❌ Error: Incomplete header read.\n";
+        return false;
+    }
+
+    if (strcmp(outHeader.magic, "OMNIFS01") != 0) {
+        cerr << "❌ ERROR: Invalid header magic read ('" << outHeader.magic << "').\n";
+        return false;
+    }
+
+    cout << "✅ Header read successfully (Verified).\n";
+    return true;     // ✅ Don’t close file here — stay open for subsequent writes
+}
 
     // =====================================================
     //  Write and read data blocks
@@ -310,27 +307,31 @@ public:
         return true;
     }
 
-bool loadUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
-    if (!file.is_open()) {
-        // Auto-open if needed
-        file.open(fileName, ios::in | ios::binary);
+    bool loadUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
         if (!file.is_open()) {
-            cerr << "❌ Error: Could not open file while loading users.\n";
-            return false;
+            // Auto-open if needed
+            file.open(fileName, ios::in | ios::binary);
+            if (!file.is_open()) {
+                cerr << "❌ Error: Could not open file while loading users.\n";
+                return false;
+            }
         }
+
+        users.resize(count);
+        file.seekg(offset, ios::beg);
+        for (uint32_t i = 0; i < count; ++i)
+            file.read(reinterpret_cast<char*>(&users[i]), sizeof(UserInfo));
+
+        cout << "✅ Loaded " << count << " users from .omni file.\n";
+        return true;
     }
 
-    users.resize(count);
-    file.seekg(offset, ios::beg);
-    for (uint32_t i = 0; i < count; ++i)
-        file.read(reinterpret_cast<char*>(&users[i]), sizeof(UserInfo));
-
-    cout << "✅ Loaded " << count << " users from .omni file.\n";
-    return true;
-}
-
-
-
+    void seekToStart() {
+        if (file.is_open()) {
+            file.seekg(0, ios::beg);
+            file.seekp(0, ios::beg);
+        }
+    }
 
     // =====================================================
     //  Close file cleanly
@@ -341,4 +342,6 @@ bool loadUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
             cout << "🧹 Closed .omni file: " << fileName << endl;
         }
     }
+
+
 };
