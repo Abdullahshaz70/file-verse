@@ -210,7 +210,7 @@ int main8() {
     return 0;
 }
 
-int main() {
+int main9() {
     OFSCore ofs(20);
 
     cout << "1. Format new OFS\n";
@@ -223,9 +223,27 @@ int main() {
     else if (choice == 2) ofs.loadSystem();
     else if (choice == 3) ofs.writeFileContent("/Documents/readme.txt", "Hello Abdullah! This is real data inside the .omni file.");
     else if (choice == 4) ofs.readFileContent(0, 50);
+
+    return 0;
 }
 
 
+int main() {
+    OFSCore ofs(256);
+
+    cout << "1. Format new OFS\n";
+    cout << "2. Load existing OFS\n";
+    cout << "3. Write sample file data\n";
+    cout << "4. Read sample file data\n";
+    cout << "5. View system stats\n";
+    int choice; cin >> choice;
+
+    if (choice == 1) ofs.format();
+    else if (choice == 2) ofs.loadSystem();
+    else if (choice == 3) ofs.writeFileContent("/Documents/readme.txt", "This is a data block test for stats.");
+    else if (choice == 4) ofs.readFileContent(0, 40);
+    else if (choice == 5) ofs.printStats();
+}
 
 
 

@@ -20,7 +20,10 @@ private:
 
    
     OMNIHeader header;
+    
     FSStats stats;
+    uint64_t totalBlocks = 256;
+
     bool isInitialized;     
 
     FileIOManager fileManager;
@@ -29,124 +32,153 @@ private:
     uint64_t dataStartOffset = 0;
 
 
+
+    void updateStats() {
+    vector<bool> map = spaceManager.getMap();
+    uint64_t used = count(map.begin(), map.end(), true);
+    uint64_t free = count(map.begin(), map.end(), false);
+
+    stats.total_size = header.total_size;
+    uint64_t blockSize = header.block_size;
+    stats.used_space = used * blockSize;
+    stats.free_space = free * blockSize;
+    stats.total_files = 0;
+    stats.total_directories = 1;
+    stats.total_users = 1;
+    stats.active_sessions = 0;
+    stats.fragmentation = ((double)used / (double)totalBlocks) * 100.0;
+
+    cout << "\n--- File System Stats Updated ---\n";
+    cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
+    cout << "Used Space: " << stats.used_space / 1024 << " KB\n";
+    cout << "Free Space: " << stats.free_space / 1024 << " KB\n";
+    cout << "Fragmentation: " << stats.fragmentation << "%\n";
+}
+
+
+
 public:
    
-    OFSCore(int totalBlocks = 100):spaceManager(totalBlocks),isInitialized(false){
-
-        header = OMNIHeader(0x00010000, totalBlocks * 4096, sizeof(OMNIHeader), 4096);
-        stats = FSStats(totalBlocks * 4096, 0, totalBlocks * 4096);
-        cout << "OFSCore initialized with " << totalBlocks << " blocks." << endl;
-
-
-    }
+    OFSCore(int blocks = 256)
+    : spaceManager(blocks), totalBlocks(blocks), isInitialized(false) {
+    uint64_t blockSize = 4096;
+    uint64_t totalSize = blocks * blockSize;
+    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+    stats = FSStats(totalSize, 0, totalSize);
+    cout << "OFSCore initialized with " << blocks << " blocks." << endl;
+}
 
     ~OFSCore(){ cout << "OFSCore shutting down." << endl;}
 
-
-
     void format() {
-        cout << "Formatting OFS..." << endl;
+    cout << "Formatting OFS..." << endl;
 
-        spaceManager.reset();
-        dirTree.reset();
+    spaceManager.reset();
+    dirTree.reset();
 
-        uint64_t totalSize = 1024 * 1024;   
-        uint64_t blockSize = 4096;
+    uint64_t totalSize = totalBlocks * 4096;
+    uint64_t blockSize = 4096;
 
-        fileManager.createOmniFile(omniFileName, totalSize, blockSize);
-        fileManager.openFile(omniFileName, blockSize);
+    fileManager.createOmniFile(omniFileName, totalSize, blockSize);
+    fileManager.openFile(omniFileName, blockSize);
 
-        OMNIHeader header(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
-        strcpy(header.magic, "OMNIFS01");
-        strcpy(header.student_id, "2022-CS-7062");
-        strcpy(header.submission_date, "2025-11-09");
+    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
+    strcpy(header.magic, "OMNIFS01");
+    strcpy(header.student_id, "2022-CS-7062");
+    strcpy(header.submission_date, "2025-11-09");
+    fileManager.writeHeader(header);
 
-        fileManager.writeHeader(header);
+    vector<UserInfo> emptyUsers(10);
+    uint64_t userTableOffset = sizeof(OMNIHeader);
+    fileManager.writeUsers(emptyUsers, userTableOffset);
 
-        vector<UserInfo> emptyUsers(10); 
-        uint64_t userTableOffset = sizeof(OMNIHeader);
-        fileManager.writeUsers(emptyUsers, userTableOffset);
+    vector<bool> freeMap(totalBlocks, false);
+    uint64_t freeMapOffset = userTableOffset + (emptyUsers.size() * sizeof(UserInfo));
+    fileManager.writeFreeMap(freeMap, freeMapOffset);
 
-        vector<bool> freeMap(256, false); 
-        uint64_t freeMapOffset = userTableOffset + (emptyUsers.size() * sizeof(UserInfo));
-        fileManager.writeFreeMap(freeMap, freeMapOffset);
+    vector<FileEntry> entries;
+    dirTree.exportToEntries(entries);
+    uint64_t metaOffset = freeMapOffset + freeMap.size();
+    fileManager.writeFileEntries(entries, metaOffset);
 
-        vector<FileEntry> entries;
-        dirTree.exportToEntries(entries);   
-        uint64_t metaOffset = freeMapOffset + freeMap.size();
-        fileManager.writeFileEntries(entries, metaOffset);
+    dataStartOffset =
+        sizeof(OMNIHeader) +
+        (emptyUsers.size() * sizeof(UserInfo)) +
+        freeMap.size() +
+        (entries.size() * sizeof(FileEntry));
 
-        dataStartOffset = metaOffset + (entries.size() * sizeof(FileEntry));
+    fileManager.closeFile();
 
+    isInitialized = true;
+    cout << "OFS formatted and .omni file created successfully.\n";
 
-        fileManager.closeFile();
-
-        isInitialized = true;
-        cout << "OFS formatted and .omni file created successfully.\n";
-    }
+    updateStats();
+}
 
 
     bool loadSystem() {
-        cout << "Loading OFS from " << omniFileName << "...\n";
-        uint64_t blockSize = 4096;
+    cout << "Loading OFS from " << omniFileName << "...\n";
+    uint64_t blockSize = 4096;
 
-
-        if (!fileManager.openFile(omniFileName, blockSize)) {
-            cerr << "Error: Could not open .omni file. Please format first.\n";
-            return false;
-        }
-
-        OMNIHeader header;
-        if (!fileManager.readHeader(header)) {
-            cerr << "Error reading header.\n";
-            return false;
-        }
-
-        cout << "Loaded OMNI file successfully.\n";
-        cout << "Magic: " << header.magic << endl;
-        cout << "Total Size: " << header.total_size << " bytes\n";
-        cout << "Block Size: " << header.block_size << " bytes\n";
-        cout << "Student ID: " << header.student_id << "\n";
-        cout << "Submission Date: " << header.submission_date << "\n";
-
-        
-        
-        
-        vector<UserInfo> loadedUsers;
-        uint64_t userTableOffset = sizeof(OMNIHeader);
-        fileManager.readUsers(loadedUsers, userTableOffset, 10);
-
-        cout << "\n--- Loaded Users ---\n";
-        for (const auto& u : loadedUsers) {
-            if (u.is_active)
-                cout << "Username: " << u.username
-                     << " | Role: " << (u.role == UserRole::ADMIN ? "Admin" : "User") << "\n";
-        }
-
-        vector<bool> loadedMap;
-        uint64_t freeMapOffset = userTableOffset + (loadedUsers.size() * sizeof(UserInfo));
-        fileManager.readFreeMap(loadedMap, freeMapOffset, 256);
-
-        cout << "\nFree Blocks Available: "
-             << count(loadedMap.begin(), loadedMap.end(), false) << "\n";
-
-
-            
-        vector<FileEntry> entries;
-        uint64_t metaOffset = freeMapOffset + loadedMap.size();
-        fileManager.readFileEntries(entries, metaOffset, 50); 
-
-        cout << "\n--- Directory Metadata Loaded ---\n";
-        for (auto& e : entries)
-            if (strlen(e.name) > 0)
-                cout << (e.type == 1 ? "[DIR] " : "[FILE] ") << e.name
-                    << " (" << e.size << " bytes)\n";
-
-
-        fileManager.closeFile();
-        isInitialized = true;
-        return true;
+    if (!fileManager.openFile(omniFileName, blockSize)) {
+        cerr << "Error: Could not open .omni file. Please format first.\n";
+        return false;
     }
+
+    OMNIHeader tmp;
+    if (!fileManager.readHeader(tmp)) {
+        cerr << "Error reading header.\n";
+        return false;
+    }
+    header = tmp;
+
+    cout << "Loaded OMNI file successfully.\n";
+    cout << "Magic: " << header.magic << endl;
+    cout << "Total Size: " << header.total_size << " bytes\n";
+    cout << "Block Size: " << header.block_size << " bytes\n";
+    cout << "Student ID: " << header.student_id << "\n";
+    cout << "Submission Date: " << header.submission_date << "\n";
+
+    vector<UserInfo> loadedUsers;
+    uint64_t userTableOffset = sizeof(OMNIHeader);
+    fileManager.readUsers(loadedUsers, userTableOffset, 10);
+
+    cout << "\n--- Loaded Users ---\n";
+    for (const auto& u : loadedUsers) {
+        if (u.is_active)
+            cout << "Username: " << u.username
+                 << " | Role: " << (u.role == UserRole::ADMIN ? "Admin" : "User") << "\n";
+    }
+
+    vector<bool> loadedMap;
+    uint64_t freeMapOffset = userTableOffset + (loadedUsers.size() * sizeof(UserInfo));
+    fileManager.readFreeMap(loadedMap, freeMapOffset, totalBlocks);
+    spaceManager.setMap(loadedMap); // <-- important fix
+
+    cout << "\nFree Blocks Available: "
+         << count(loadedMap.begin(), loadedMap.end(), false) << "\n";
+
+    vector<FileEntry> entries;
+    uint64_t metaOffset = freeMapOffset + loadedMap.size();
+    fileManager.readFileEntries(entries, metaOffset, 50);
+
+    cout << "\n--- Directory Metadata Loaded ---\n";
+    for (auto& e : entries)
+        if (strlen(e.name) > 0)
+            cout << (e.type == 1 ? "[DIR] " : "[FILE] ") << e.name
+                 << " (" << e.size << " bytes)\n";
+
+    dataStartOffset =
+        sizeof(OMNIHeader) +
+        (loadedUsers.size() * sizeof(UserInfo)) +
+        loadedMap.size() +
+        (entries.size() * sizeof(FileEntry));
+
+    fileManager.closeFile();
+    isInitialized = true;
+    updateStats(); // <-- after restoring map
+    return true;
+}
 
     void createUser(const string& username, const string& password, bool isAdmin){
         userManager.addUser(username , password , isAdmin);
@@ -172,13 +204,11 @@ public:
         dirTree.createDirectory(path , name);
     }
     
-    void printStats() const{
+    void spacePrint() const{
         spaceManager.print();
     }                         
     
     bool isSystemReady() const { return isInitialized; }
-
-
 
     bool writeFileContent(const string& filePath, const string& fileData) {
         cout << "Writing file content for: " << filePath << endl;
@@ -200,6 +230,9 @@ public:
         uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
         fileManager.writeFreeMap(freeMap, freeMapOffset);
 
+        updateStats();
+
+
         fileManager.closeFile();
         cout << "File stored successfully at block #" << blockIndex << "\n";
         return true;
@@ -216,6 +249,16 @@ public:
         string content(buffer.begin(), buffer.begin() + dataLength);
         cout << "File content:\n" << content << endl;
         return true;
+    }
+
+    void printStats() const {
+        cout << "\n--- OFS Statistics ---\n";
+        cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
+        cout << "Used Space: " << stats.used_space / 1024 << " KB\n";
+        cout << "Free Space: " << stats.free_space / 1024 << " KB\n";
+        cout << "Total Blocks: " << totalBlocks << "\n";
+        cout << "Fragmentation: " << stats.fragmentation << "%\n";
+        cout << "-------------------------\n";
     }
 
 
