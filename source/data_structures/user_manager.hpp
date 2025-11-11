@@ -1,5 +1,13 @@
-#include<iostream>
-#include<string>
+#pragma once
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
+#include <openssl/sha.h> 
 using namespace std;
 
 
@@ -203,24 +211,66 @@ public:
         deleteTree(root);
     }
 
+    string hashPassword(const string& password) {
+        unsigned char hash[SHA256_DIGEST_LENGTH];
+        SHA256(reinterpret_cast<const unsigned char*>(password.c_str()), password.size(), hash);
+
+        stringstream ss;
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+            ss << hex << setw(2) << setfill('0') << (int)hash[i];
+        return ss.str();
+    }
  
 
-    bool addUser(const string& username, const std::string& password, bool isAdmin){
+    // bool addUser(const string& username, const std::string& password, bool isAdmin){
 
-        if(isPresent(root , username)){
-            cout<<"Username is Already Registered"<<endl;
+    //     if(isPresent(root , username)){
+    //         cout<<"Username is Already Registered"<<endl;
+    //         return false;
+    //     }
+
+    //     root = insertNode(root ,username , password , isAdmin);
+    //     return true;
+    // }
+
+    bool addUser(const string& username, const string& password, bool isAdmin) {
+        if (isPresent(root, username)) {
+            cout << "⚠️  Username already registered.\n";
             return false;
         }
 
-        root = insertNode(root ,username , password , isAdmin);
+        string hashed = hashPassword(password);
+        root = insertNode(root, username, hashed, isAdmin);
+        cout << "✅ User added: " << username
+            << " (" << (isAdmin ? "Admin" : "Normal") << ")\n";
         return true;
     }
 
-    bool authenticate(const string& username, const string& password){
-        UserNode* user = isPresent(root , username);
-        return (user && user->password == password);
-    }
+
+    // bool authenticate(const string& username, const string& password){
+    //     UserNode* user = isPresent(root , username);
+    //     return (user && user->password == password);
+    // }
     
+    bool authenticate(const string& username, const string& password) {
+    UserNode* user = isPresent(root, username);
+    if (!user) {
+        cout << "❌ User not found.\n";
+        return false;
+    }
+
+    string hashed = hashPassword(password);
+    if (user->password == hashed) {
+        cout << "🔓 Login successful for " << username
+             << " (" << (user->isAdmin ? "Admin" : "Normal") << ")\n";
+        return true;
+    }
+
+    cout << "❌ Invalid credentials for " << username << endl;
+    return false;
+}
+
+
     bool removeUser(const string& username){
         if(!isPresent(root,username)){
             cout<<"Username not found to delete!"<<endl;

@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cstring>
 
+#include "../../data_structures/session_manger.hpp"
 #include "../../data_structures/user_manager.hpp"
 #include "../../data_structures/directory_tree.hpp"
 #include "../../data_structures/free_space.hpp"
@@ -14,7 +15,8 @@
 using namespace std;
 
 class OFSCore {
-private:
+
+
     UserManager userManager;
     DirectoryTree dirTree;
     FreeSpace spaceManager;
@@ -26,6 +28,11 @@ private:
     uint64_t dataStartOffset = 0;
     bool isInitialized = false;
     string omniFileName = "filesystem.omni";
+
+    
+    SessionManager sessionManager;   
+
+    
 
     // =============================================================
     // 🧮 Update runtime FS statistics
@@ -52,7 +59,8 @@ public:
     // 🧱 Constructor
     // =============================================================
     OFSCore(int blocks = 2048)
-        : spaceManager(blocks), totalBlocks(blocks), isInitialized(false) {
+    : spaceManager(blocks), totalBlocks(blocks),
+      isInitialized(false), sessionManager(&userManager) {
         uint64_t blockSize = 4096;
         uint64_t totalSize = blocks * blockSize;
         header = OMNIHeader();
@@ -316,4 +324,13 @@ public:
         }
         cout << "❌ Version ID not found.\n";
     }
+
+
+
+    void loginUser(const string& user, const string& pass) { sessionManager.login(user, pass); }
+    void logoutUser() { sessionManager.logout(); }
+    void showSession() const { sessionManager.printSession(); }
+
+
+
 };

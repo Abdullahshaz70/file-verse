@@ -1,12 +1,12 @@
 #include<iostream>
 #include "../include/core/OFSCore.hpp"
-#include "../include/core/file_io_manager.hpp"
+
 
 
 using namespace std;
 
 
-int main() {
+int main1() {
     cout << "=============================\n";
     cout << "🌐 Omni File System - DeltaVault Phase\n";
     cout << "=============================\n\n";
@@ -99,9 +99,67 @@ int main() {
 
 
 
+int main2() {
+    UserManager um;
+
+    um.addUser("admin", "12345", true);
+    um.addUser("user1", "hello", false);
+    um.print();
+
+    um.authenticate("admin", "12345");   // ✅ correct
+    um.authenticate("user1", "wrong");   // ❌ incorrect
+
+
+    return 0;
+}
 
 
 
+
+int main() {
+    cout << "=============================\n";
+    cout << "👤 User + Session Manager Test\n";
+    cout << "=============================\n\n";
+
+    UserManager userManager;
+    SessionManager sessionManager(&userManager);
+
+    // Step 1: Add Users
+    cout << "\n--- Adding Users ---\n";
+    userManager.addUser("admin", "admin123", true);
+    userManager.addUser("user1", "userpass", false);
+    userManager.addUser("user2", "test123", false);
+
+    cout << "\n✅ Current Users (AVL Inorder):\n";
+    userManager.print();
+
+    // Step 2: Try logins
+    cout << "\n--- Testing Logins ---\n";
+    sessionManager.login("admin", "admin123");   // ✅ should succeed (Admin)
+    sessionManager.printSession();
+
+    cout << "\nAttempting invalid login:\n";
+    sessionManager.login("user1", "wrongpass");  // ❌ should fail
+
+    cout << "\nLogging out admin...\n";
+    sessionManager.logout();
+
+    cout << "\nLogging in as user1...\n";
+    sessionManager.login("user1", "userpass");   // ✅ should succeed (Normal)
+    sessionManager.printSession();
+
+    // Step 3: Simulate some operations
+    cout << "\nSimulating 3 file operations by user1...\n";
+    for (int i = 0; i < 3; ++i) sessionManager.recordOperation();
+    sessionManager.printSession();
+
+    // Step 4: Logout
+    cout << "\nLogging out user1...\n";
+    sessionManager.logout();
+
+    cout << "\n✅ Test complete.\n";
+    return 0;
+}
 
 
 
