@@ -290,6 +290,48 @@ public:
         return true;
     }
 
+
+    // ================================================
+    // 🔐 Persistent User Table Management
+    // ================================================
+
+    bool saveUsers(const vector<UserInfo>& users, uint64_t offset) {
+        if (!file.is_open()) {
+            cerr << "❌ Error: File not open while saving users.\n";
+            return false;
+        }
+
+        file.seekp(offset, ios::beg);
+        for (const auto& user : users) {
+            file.write(reinterpret_cast<const char*>(&user), sizeof(UserInfo));
+        }
+        file.flush();
+        cout << "✅ Saved " << users.size() << " users to .omni file.\n";
+        return true;
+    }
+
+bool loadUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
+    if (!file.is_open()) {
+        // Auto-open if needed
+        file.open(fileName, ios::in | ios::binary);
+        if (!file.is_open()) {
+            cerr << "❌ Error: Could not open file while loading users.\n";
+            return false;
+        }
+    }
+
+    users.resize(count);
+    file.seekg(offset, ios::beg);
+    for (uint32_t i = 0; i < count; ++i)
+        file.read(reinterpret_cast<char*>(&users[i]), sizeof(UserInfo));
+
+    cout << "✅ Loaded " << count << " users from .omni file.\n";
+    return true;
+}
+
+
+
+
     // =====================================================
     //  Close file cleanly
     // =====================================================

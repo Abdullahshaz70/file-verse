@@ -68,6 +68,13 @@ public:
     bool isLoggedIn() const { return current.active; }
     bool isAdmin() const { return current.active && current.isAdmin; }
     string getActiveUsername() const { return current.active ? current.username : "None"; }
+    bool isActive() const { return current.active; }
+
+    bool isAdminUser() const {return current.active && current.isAdmin; }
+
+string getCurrentUser() const { return current.active ? current.username : "None"; }
+
+
 
     // Optional: used to show current user info
     void printSession() const {
