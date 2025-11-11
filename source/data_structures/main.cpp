@@ -52,10 +52,10 @@ int main1() {
 }
 
 
-int main() {
+int main2() {
     UserManager userMgr;
     SessionManager session(&userMgr);
-    OFSCore ofs(&userMgr, 256);   // 256 blocks = 1 MB FS
+    OFSCore ofs(&userMgr, 256);   
     ofs.attachSession(&session);
 
     cout << "=============================\n";

@@ -860,4 +860,87 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
     }
 
     UserManager& getUserManager() { return *userManager; }
+
+
+    // =============================================================
+    // 🧩 VERIFY FILE STRUCTURE
+    // =============================================================
+    void verifyFileStructure() {
+        cout << "🧩 Verifying file structure...\n";
+
+        if (!fileManager.openFile(omniFileName, 4096)) {
+            cerr << "❌ Could not open .omni file for verification.\n";
+            return;
+        }
+
+        OMNIHeader verify{};
+        if (!fileManager.readHeader(verify)) {
+            cerr << "❌ Header could not be read — corrupted file.\n";
+            fileManager.closeFile();
+            return;
+        }
+
+        // --- Header Validation ---
+        bool headerOK = strcmp(verify.magic, "OMNIFS01") == 0;
+        bool versionOK = verify.format_version == 0x00010000;
+        bool blockSizeOK = verify.block_size == 4096;
+        bool totalSizeOK = verify.total_size > 0;
+
+        cout << "\n--- HEADER INFO ---\n";
+        cout << "Magic: " << verify.magic << "\n";
+        cout << "Format Version: 0x" << hex << verify.format_version << dec << "\n";
+        cout << "Block Size: " << verify.block_size << "\n";
+        cout << "Total Size: " << verify.total_size / 1024 << " KB\n";
+
+        if (!headerOK || !versionOK || !blockSizeOK || !totalSizeOK) {
+            cerr << "❌ Header verification failed.\n";
+            fileManager.closeFile();
+            return;
+        }
+
+        // --- Offsets Consistency ---
+        cout << "\n--- REGION OFFSETS ---\n";
+        cout << "User Table Offset: " << verify.user_table_offset << endl;
+        cout << "Version Storage Offset: " << verify.file_state_storage_offset << endl;
+        cout << "Change Log Offset: " << verify.change_log_offset << endl;
+
+        if (verify.file_state_storage_offset <= verify.header_size) {
+            cerr << "⚠️ Version storage overlaps header region!\n";
+        }
+        if (verify.change_log_offset <= verify.file_state_storage_offset) {
+            cerr << "⚠️ Change log overlaps version region!\n";
+        }
+
+        // --- Users Verification ---
+        vector<UserInfo> testUsers;
+        if (fileManager.loadUsers(testUsers, sizeof(OMNIHeader), 10)) {
+            cout << "\n--- USER TABLE (Active Entries) ---\n";
+            for (const auto& u : testUsers)
+                if (strlen(u.username) > 0)
+                    cout << "👤 " << u.username << " | Role: "
+                        << (u.role == UserRole::ADMIN ? "Admin" : "User")
+                        << " | Active: " << (u.is_active ? "Yes" : "No") << endl;
+        }
+
+        // --- Versions Check ---
+        vector<VersionBlock> versions;
+        fileManager.readAllVersions(versions, verify.file_state_storage_offset);
+        cout << "\n--- VERSION STORAGE ---\n";
+        cout << "Total Versions: " << versions.size() << endl;
+
+        // --- Log Check ---
+        vector<ChangeLogEntry> log;
+        fileManager.readChangeLog(log, verify.change_log_offset, 10);
+        cout << "\n--- CHANGE LOG ENTRIES ---\n";
+        for (auto& e : log)
+            if (strlen(e.filePath) > 0)
+                cout << e.filePath << " | " << e.user << " | " << e.action
+                    << " | v" << e.versionID << " | " << ctime((time_t*)&e.timestamp);
+
+        fileManager.closeFile();
+        cout << "\n✅ File structure verification complete.\n";
+    }
+
+
+
 };
