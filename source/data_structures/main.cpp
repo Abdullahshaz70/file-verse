@@ -196,15 +196,23 @@ int main7() {
 }
 
 
-
-
 int main() {
     cout << "1. Format new OFS\n";
     cout << "2. Load existing OFS\n";
-    int c; cin >> c;
+    int choice; cin >> choice;
+
     OFSCore ofs(20);
-    if (c == 1) ofs.format();
+
+    if (choice == 1) ofs.format();
     else ofs.loadSystem();
+
+    cout << "\nDone.\n";
+    return 0;
 }
+
+
+
+
+
 
 

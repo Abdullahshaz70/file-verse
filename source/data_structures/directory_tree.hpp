@@ -3,6 +3,8 @@
 #include<sstream>
 #include<algorithm>
 #include<vector>
+#include"odf_types.hpp"
+
 using namespace std;
 
 
@@ -83,7 +85,6 @@ public:
 
     DirectoryTree():root(nullptr){root = new FileNode("root", false, nullptr); }
     ~DirectoryTree() { 
-        // cout << "[Debug] DirectoryTree destructor called\n";
         deleteNodeRec(root);
         root = nullptr;
     }
@@ -189,6 +190,35 @@ public:
         deleteNodeRec(root);
         root = new FileNode("root", false, nullptr);
     }
+
+
+    
+    void exportToEntries(vector<FileEntry>& entries, const string& currentPath = "/") {
+        if (!root) return;
+        exportNode(root, currentPath, entries);
+    }
+
+void exportNode(FileNode* node, const string& path, vector<FileEntry>& entries) {
+    if (!node) return;
+
+    FileEntry entry;
+    memset(&entry, 0, sizeof(FileEntry));
+
+    strcpy(entry.name, (path + node->name).c_str());
+    entry.type = node->isFile ? 0 : 1;
+    entry.size = node->isFile ? node->data.size() : 0;
+    entry.permissions = 0644;
+    strcpy(entry.owner, "admin");
+    entry.inode = reinterpret_cast<uint64_t>(node) & 0xFFFFFFFF;  
+
+    entries.push_back(entry);
+
+    
+    if (!node->isFile) {
+        for (auto* child : node->children)
+            exportNode(child, path + node->name + "/", entries);
+    }
+}
 
 
 };

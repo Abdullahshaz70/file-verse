@@ -150,5 +150,26 @@ public:
     }
 
 
+    bool writeFileEntries(const vector<FileEntry>& entries, uint64_t offset) {
+        if (!file.is_open()) return false;
+        file.seekp(offset, ios::beg);
+        for (const auto& e : entries)
+            file.write(reinterpret_cast<const char*>(&e), sizeof(FileEntry));
+        file.flush();
+        cout << "Directory metadata written successfully.\n";
+        return true;
+    }      
+
+    bool readFileEntries(vector<FileEntry>& entries, uint64_t offset, uint32_t count) {
+        if (!file.is_open()) return false;
+        entries.resize(count);
+        file.seekg(offset, ios::beg);
+        for (uint32_t i = 0; i < count; ++i)
+            file.read(reinterpret_cast<char*>(&entries[i]), sizeof(FileEntry));
+        cout << "Directory metadata read successfully.\n";
+        return true;
+    }
+
+
 
 };
