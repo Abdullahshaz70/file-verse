@@ -1,9 +1,11 @@
+#pragma once
 #include<iostream>
 #include<string>
 #include<sstream>
 #include<algorithm>
 #include<vector>
-#include"odf_types.hpp"
+
+#include "core/odf_types.hpp"
 
 using namespace std;
 

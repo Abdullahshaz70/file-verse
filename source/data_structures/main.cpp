@@ -1,4 +1,5 @@
 #include<iostream>
+
 #include "../include/core/OFSCore.hpp"
 
 using namespace std;
@@ -55,7 +56,7 @@ int main1() {
 int main2() {
     UserManager userMgr;
     SessionManager session(&userMgr);
-    OFSCore ofs(&userMgr, 256);   
+    OFSCore ofs(&userMgr, 256);   // 256 blocks 
     ofs.attachSession(&session);
 
     cout << "=============================\n";
@@ -166,3 +167,24 @@ int main2() {
 }
 
 
+int main() {
+    cout << "=============================\n";
+    cout << "🔍 Omni File System Structure Check\n";
+    cout << "=============================\n\n";
+
+    // --- Core setup ---
+    UserManager userManager;
+    SessionManager session(&userManager);
+    OFSCore ofs(&userManager);
+
+    ofs.attachSession(&session);
+
+    // --- Optional login (not required for verify) ---
+    session.login("admin", "admin123");
+
+    // --- Perform verification ---
+    ofs.verifyFileStructure();
+
+    cout << "\n✅ Structure verification complete.\n";
+    return 0;
+}
