@@ -98,14 +98,14 @@ struct OMNIHeader {
     OMNIHeader() = default;
     
     // Constructor with initialization
-    OMNIHeader(uint32_t version, uint64_t size, uint64_t header_sz, uint64_t block_sz)
-        : format_version(version), total_size(size), header_size(header_sz), block_size(block_sz) {
-        std::memset(magic, 0, sizeof(magic));
-        std::memset(student_id, 0, sizeof(student_id));
-        std::memset(submission_date, 0, sizeof(submission_date));
-        std::memset(config_hash, 0, sizeof(config_hash));
-        std::memset(reserved, 0, sizeof(reserved));
-    }
+    // OMNIHeader(uint32_t version, uint64_t size, uint64_t header_sz, uint64_t block_sz)
+    //     : format_version(version), total_size(size), header_size(header_sz), block_size(block_sz) {
+    //     std::memset(magic, 0, sizeof(magic));
+    //     std::memset(student_id, 0, sizeof(student_id));
+    //     std::memset(submission_date, 0, sizeof(submission_date));
+    //     std::memset(config_hash, 0, sizeof(config_hash));
+    //     std::memset(reserved, 0, sizeof(reserved));
+    // }
 };  // Total: 512 bytes
 
 /**

@@ -1,259 +1,202 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <vector>
+#include <ctime>
+#include <cstring>
 
 #include "../../data_structures/user_manager.hpp"
 #include "../../data_structures/directory_tree.hpp"
 #include "../../data_structures/free_space.hpp"
-#include "odf_types.hpp"   
+#include "odf_types.hpp"
 #include "file_io_manager.hpp"
-
 
 using namespace std;
 
 class OFSCore {
 private:
-    
     UserManager userManager;
     DirectoryTree dirTree;
     FreeSpace spaceManager;
-
-   
-    OMNIHeader header;
-    
-    FSStats stats;
-    uint64_t totalBlocks = 256;
-
-    bool isInitialized;     
-
     FileIOManager fileManager;
+
+    OMNIHeader header{};
+    FSStats stats{};
+    uint64_t totalBlocks = 2048;
+    uint64_t dataStartOffset = 0;
+    bool isInitialized = false;
     string omniFileName = "filesystem.omni";
 
-    uint64_t dataStartOffset = 0;
-
-
-
-
-
+    // =============================================================
+    // 🧮 Update runtime FS statistics
+    // =============================================================
     void updateStats() {
-    vector<bool> map = spaceManager.getMap();
-    uint64_t used = count(map.begin(), map.end(), true);
-    uint64_t free = count(map.begin(), map.end(), false);
+        vector<bool> map = spaceManager.getMap();
+        uint64_t used = count(map.begin(), map.end(), true);
+        uint64_t free = count(map.begin(), map.end(), false);
 
-    stats.total_size = header.total_size;
-    uint64_t blockSize = header.block_size;
-    stats.used_space = used * blockSize;
-    stats.free_space = free * blockSize;
-    stats.total_files = 0;
-    stats.total_directories = 1;
-    stats.total_users = 1;
-    stats.active_sessions = 0;
-    stats.fragmentation = ((double)used / (double)totalBlocks) * 100.0;
+        stats.total_size = header.total_size;
+        stats.used_space = used * header.block_size;
+        stats.free_space = free * header.block_size;
+        stats.fragmentation = ((double)used / (double)totalBlocks) * 100.0;
 
-    cout << "\n--- File System Stats Updated ---\n";
-    cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
-    cout << "Used Space: " << stats.used_space / 1024 << " KB\n";
-    cout << "Free Space: " << stats.free_space / 1024 << " KB\n";
-    cout << "Fragmentation: " << stats.fragmentation << "%\n";
-}
-
-
+        cout << "\n--- File System Stats Updated ---\n";
+        cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
+        cout << "Used Space: " << stats.used_space / 1024 << " KB\n";
+        cout << "Free Space: " << stats.free_space / 1024 << " KB\n";
+        cout << "Fragmentation: " << stats.fragmentation << "%\n";
+    }
 
 public:
-   
-    OFSCore(int blocks = 256)
-    : spaceManager(blocks), totalBlocks(blocks), isInitialized(false) {
-    uint64_t blockSize = 4096;
-    uint64_t totalSize = blocks * blockSize;
-    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
-    stats = FSStats(totalSize, 0, totalSize);
-    cout << "OFSCore initialized with " << blocks << " blocks." << endl;
-}
+    // =============================================================
+    // 🧱 Constructor
+    // =============================================================
+    OFSCore(int blocks = 2048)
+        : spaceManager(blocks), totalBlocks(blocks), isInitialized(false) {
+        uint64_t blockSize = 4096;
+        uint64_t totalSize = blocks * blockSize;
+        header = OMNIHeader();
+        stats = FSStats(totalSize, 0, totalSize);
+        cout << "OFSCore initialized with " << totalBlocks
+             << " blocks (" << totalSize / 1024 << " KB)." << endl;
+    }
 
-    ~OFSCore(){ cout << "OFSCore shutting down." << endl;}
+    ~OFSCore() { cout << "OFSCore shutting down." << endl; }
 
+    // =============================================================
+    // 🧾 FORMAT OFS
+    // =============================================================
     void format() {
-    cout << "Formatting OFS..." << endl;
+        cout << "\nFormatting OFS...\n";
+        spaceManager.reset();
+        dirTree.reset();
 
-    spaceManager.reset();
-    dirTree.reset();
+        uint64_t totalSize = totalBlocks * 4096;
+        uint64_t blockSize = 4096;
 
-    uint64_t totalSize = totalBlocks * 4096;
-    uint64_t blockSize = 4096;
+        // 1️⃣ Create blank .omni file
+        fileManager.createOmniFile(omniFileName, totalSize, blockSize);
+        fileManager.openFile(omniFileName, blockSize);
 
-    fileManager.createOmniFile(omniFileName, totalSize, blockSize);
-    fileManager.openFile(omniFileName, blockSize);
+        // 2️⃣ Initialize header
+        header.format_version = 0x00010000;
+        header.total_size = totalSize;
+        header.header_size = sizeof(OMNIHeader);
+        header.block_size = blockSize;
+        strncpy(header.magic, "OMNIFS01", sizeof(header.magic));
+        strncpy(header.student_id, "2022-CS-7062", sizeof(header.student_id));
+        strncpy(header.submission_date, "2025-11-09", sizeof(header.submission_date));
 
-    header = OMNIHeader(0x00010000, totalSize, sizeof(OMNIHeader), blockSize);
-    strcpy(header.magic, "OMNIFS01");
-    strcpy(header.student_id, "2022-CS-7062");
-    strcpy(header.submission_date, "2025-11-09");
-    fileManager.writeHeader(header);
+        vector<UserInfo> emptyUsers(10);
+        vector<bool> freeMap(totalBlocks, false);
+        vector<FileEntry> entries;
+        dirTree.exportToEntries(entries);
 
-    vector<UserInfo> emptyUsers(10);
-    uint64_t userTableOffset = sizeof(OMNIHeader);
-    fileManager.writeUsers(emptyUsers, userTableOffset);
+        // 3️⃣ Calculate all offset positions
+        uint64_t offset = sizeof(OMNIHeader);
+        uint64_t userTableOffset = offset;
+        offset += emptyUsers.size() * sizeof(UserInfo);
 
-    vector<bool> freeMap(totalBlocks, false);
-    uint64_t freeMapOffset = userTableOffset + (emptyUsers.size() * sizeof(UserInfo));
-    fileManager.writeFreeMap(freeMap, freeMapOffset);
+        uint64_t freeMapOffset = offset;
+        offset += freeMap.size();
 
-    vector<FileEntry> entries;
-    dirTree.exportToEntries(entries);
-    uint64_t metaOffset = freeMapOffset + freeMap.size();
-    fileManager.writeFileEntries(entries, metaOffset);
+        uint64_t metaOffset = offset;
+        offset += entries.size() * sizeof(FileEntry);
 
-    dataStartOffset =
-        sizeof(OMNIHeader) +
-        (emptyUsers.size() * sizeof(UserInfo)) +
-        freeMap.size() +
-        (entries.size() * sizeof(FileEntry));
+        dataStartOffset = offset;
+        uint64_t dataRegionSize = totalSize - dataStartOffset;
 
+        // Split remaining space for versions + changelog
+        uint64_t versionRegion = dataRegionSize * 0.95;
+        header.file_state_storage_offset = dataStartOffset + versionRegion;
+        header.change_log_offset = header.file_state_storage_offset + (100 * sizeof(VersionBlock));
 
-        
-        header.file_state_storage_offset = dataStartOffset + (totalBlocks * header.block_size);
-        header.change_log_offset = header.file_state_storage_offset + (256 * sizeof(uint64_t));
+        // Debug breakdown
+        cout << "=== FORMAT DEBUG ===\n";
+        cout << "Header: 0 - " << sizeof(OMNIHeader)
+             << "\nUserTable: " << userTableOffset
+             << "\nFreeMap: " << freeMapOffset
+             << "\nFileEntries: " << metaOffset
+             << "\nDataRegionStart: " << dataStartOffset
+             << "\nVersionStorageOffset: " << header.file_state_storage_offset
+             << "\nChangeLogOffset: " << header.change_log_offset
+             << "\n====================\n";
 
-        
-        fileManager.openFile(omniFileName, 4096);
+        // 4️⃣ Write header and tables
         fileManager.writeHeader(header);
+        fileManager.writeUsers(emptyUsers, userTableOffset);
+        fileManager.writeFreeMap(freeMap, freeMapOffset);
+        fileManager.writeFileEntries(entries, metaOffset);
+
         fileManager.closeFile();
+        cout << "✅ OFS formatted successfully.\n";
+        updateStats();
+        isInitialized = true;
+    }
 
-
-
-    fileManager.closeFile();
-
-    isInitialized = true;
-    cout << "OFS formatted and .omni file created successfully.\n";
-
-    updateStats();
-}
-
-
+    // =============================================================
+    // 📂 LOAD EXISTING SYSTEM
+    // =============================================================
     bool loadSystem() {
-    cout << "Loading OFS from " << omniFileName << "...\n";
-    uint64_t blockSize = 4096;
-
-    if (!fileManager.openFile(omniFileName, blockSize)) {
-        cerr << "Error: Could not open .omni file. Please format first.\n";
-        return false;
-    }
-
-    OMNIHeader tmp;
-    if (!fileManager.readHeader(tmp)) {
-        cerr << "Error reading header.\n";
-        return false;
-    }
-    header = tmp;
-
-    cout << "Loaded OMNI file successfully.\n";
-    cout << "Magic: " << header.magic << endl;
-    cout << "Total Size: " << header.total_size << " bytes\n";
-    cout << "Block Size: " << header.block_size << " bytes\n";
-    cout << "Student ID: " << header.student_id << "\n";
-    cout << "Submission Date: " << header.submission_date << "\n";
-
-    vector<UserInfo> loadedUsers;
-    uint64_t userTableOffset = sizeof(OMNIHeader);
-    fileManager.readUsers(loadedUsers, userTableOffset, 10);
-
-    cout << "\n--- Loaded Users ---\n";
-    for (const auto& u : loadedUsers) {
-        if (u.is_active)
-            cout << "Username: " << u.username
-                 << " | Role: " << (u.role == UserRole::ADMIN ? "Admin" : "User") << "\n";
-    }
-
-    vector<bool> loadedMap;
-    uint64_t freeMapOffset = userTableOffset + (loadedUsers.size() * sizeof(UserInfo));
-    fileManager.readFreeMap(loadedMap, freeMapOffset, totalBlocks);
-    spaceManager.setMap(loadedMap); 
-
-    cout << "\nFree Blocks Available: "
-         << count(loadedMap.begin(), loadedMap.end(), false) << "\n";
-
-    vector<FileEntry> entries;
-    uint64_t metaOffset = freeMapOffset + loadedMap.size();
-    fileManager.readFileEntries(entries, metaOffset, 50);
-
-    cout << "\n--- Directory Metadata Loaded ---\n";
-    for (auto& e : entries)
-        if (strlen(e.name) > 0)
-            cout << (e.type == 1 ? "[DIR] " : "[FILE] ") << e.name
-                 << " (" << e.size << " bytes)\n";
-
-    dataStartOffset =
-        sizeof(OMNIHeader) +
-        (loadedUsers.size() * sizeof(UserInfo)) +
-        loadedMap.size() +
-        (entries.size() * sizeof(FileEntry));
-
-    fileManager.closeFile();
-    isInitialized = true;
-    updateStats(); 
-    return true;
-}
-
-    void createUser(const string& username, const string& password, bool isAdmin){
-        userManager.addUser(username , password , isAdmin);
-    }
-    
-    bool login(const string& username, const string& password){
-        return userManager.authenticate(username , password);
-    }
-    
-    void createFile(const string& path, const string& name, const string& data){
-        dirTree.createFile(path , name , data);
-    }
-    
-    void deleteFile(const string& path){
-        dirTree.deleteNode(path);
-    }
-    
-    void listDirectory(const string& path){
-        dirTree.list(path);
-    }
-
-    void createDirectory(const string& path, const string& name){
-        dirTree.createDirectory(path , name);
-    }
-    
-    void spacePrint() const{
-        spaceManager.print();
-    }                         
-    
-    bool isSystemReady() const { return isInitialized; }
-
-    bool writeFileContent(const string& filePath, const string& fileData) {
-        cout << "Writing file content for: " << filePath << endl;
-        fileManager.openFile(omniFileName, 4096);
-
-
-        int blockIndex = spaceManager.allocateBlock();
-        if (blockIndex == -1) {
-            cerr << "No free space available.\n";
+        cout << "\nLoading OFS from " << omniFileName << "...\n";
+        if (!fileManager.openFile(omniFileName, 4096)) {
+            cerr << "❌ Error: Could not open .omni file.\n";
             return false;
         }
 
-        
-        vector<char> buffer(fileData.begin(), fileData.end());
+        OMNIHeader tmp;
+        if (!fileManager.readHeader(tmp)) return false;
+        header = tmp;
 
-        
+        if (strcmp(header.magic, "OMNIFS01") != 0) {
+            cerr << "❌ Corrupted or invalid .omni file.\n";
+            fileManager.closeFile();
+            return false;
+        }
+
+        cout << "✅ Loaded OMNI file successfully.\n";
+        cout << "Magic: " << header.magic << "\nTotal Size: " << header.total_size
+             << "\nVersion Offset: " << header.file_state_storage_offset
+             << "\nChangeLog Offset: " << header.change_log_offset << endl;
+
+        fileManager.closeFile();
+        isInitialized = true;
+        updateStats();
+        return true;
+    }
+
+    // =============================================================
+    // ✏️ WRITE FILE + CREATE VERSION ENTRY
+    // =============================================================
+    bool writeFileContent(const string& filePath, const string& fileData) {
+        cout << "\nWriting file content for: " << filePath << endl;
+
+        if (!fileManager.openFile(omniFileName, 4096)) return false;
+        int blockIndex = spaceManager.allocateBlock();
+        if (blockIndex == -1) {
+            cerr << "❌ No free space available.\n";
+            return false;
+        }
+
+        vector<char> buffer(fileData.begin(), fileData.end());
         fileManager.writeFileData(dataStartOffset, blockIndex, 4096, buffer);
+
         vector<bool> freeMap = spaceManager.getMap();
         uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
         fileManager.writeFreeMap(freeMap, freeMapOffset);
 
         updateStats();
-
+        saveFileVersion(filePath, blockIndex);
+        logChange(filePath, "admin", "MODIFY", time(nullptr));
 
         fileManager.closeFile();
-        cout << "File stored successfully at block #" << blockIndex << "\n";
-        logChange(filePath, "admin", "MODIFY", 1);
-
+        cout << "✅ File stored successfully at block #" << blockIndex << endl;
         return true;
     }
 
+    // =============================================================
+    // 📖 READ FILE DATA
+    // =============================================================
     bool readFileContent(uint32_t blockIndex, uint32_t dataLength) {
         cout << "Reading data from block #" << blockIndex << endl;
         fileManager.openFile(omniFileName, 4096);
@@ -267,57 +210,110 @@ public:
         return true;
     }
 
-
-
+    // =============================================================
+    // 🪶 CHANGE LOG SYSTEM
+    // =============================================================
     void logChange(const string& path, const string& user, const string& action, uint64_t versionID) {
         fileManager.openFile(omniFileName, 4096);
-
-        ChangeLogEntry entry;
+        ChangeLogEntry entry{};
         strncpy(entry.filePath, path.c_str(), sizeof(entry.filePath) - 1);
         strncpy(entry.user, user.c_str(), sizeof(entry.user) - 1);
         strncpy(entry.action, action.c_str(), sizeof(entry.action) - 1);
         entry.timestamp = time(nullptr);
         entry.versionID = versionID;
 
-        fileManager.writeChangeLog({ entry }, header.change_log_offset);
+        fileManager.writeChangeLog({entry}, header.change_log_offset);
         fileManager.closeFile();
     }
 
-
-
-
-    void printStats() const {
-        cout << "\n--- OFS Statistics ---\n";
-        cout << "Total Size: " << stats.total_size / 1024 << " KB\n";
-        cout << "Used Space: " << stats.used_space / 1024 << " KB\n";
-        cout << "Free Space: " << stats.free_space / 1024 << " KB\n";
-        cout << "Total Blocks: " << totalBlocks << "\n";
-        cout << "Fragmentation: " << stats.fragmentation << "%\n";
-        cout << "-------------------------\n";
-    }
-
-
-        void showChangeLog() {
+    void showChangeLog() {
         vector<ChangeLogEntry> log;
         fileManager.openFile(omniFileName, 4096);
         fileManager.readChangeLog(log, header.change_log_offset, 10);
         fileManager.closeFile();
 
         cout << "\n--- Change Log ---\n";
-        for (auto& e : log) {
-            if (strlen(e.filePath) > 0) {
+        for (auto& e : log)
+            if (strlen(e.filePath) > 0)
                 cout << e.filePath << " | " << e.action
-                     << " | " << e.user
-                     << " | v" << e.versionID
+                     << " | " << e.user << " | v" << e.versionID
                      << " | " << ctime((time_t*)&e.timestamp);
+    }
+
+    // =============================================================
+    // 🧾 SAVE NEW FILE VERSION
+    // =============================================================
+    void saveFileVersion(const string& path, uint32_t blockIndex) {
+        fileManager.openFile(omniFileName, 4096);
+
+        OMNIHeader currentHeader;
+        fileManager.readHeader(currentHeader);
+
+        if (strcmp(currentHeader.magic, "OMNIFS01") != 0) {
+            cerr << "❌ Header corrupted during version save!\n";
+            fileManager.closeFile();
+            return;
+        }
+
+        vector<VersionBlock> existingVersions;
+        fileManager.readAllVersions(existingVersions, currentHeader.file_state_storage_offset);
+
+        uint64_t versionOffset = currentHeader.file_state_storage_offset +
+                                 (existingVersions.size() * sizeof(VersionBlock));
+
+        VersionBlock vb{};
+        strncpy(vb.filePath, path.c_str(), sizeof(vb.filePath) - 1);
+        vb.versionID = static_cast<uint64_t>(time(nullptr));
+        vb.startBlock = blockIndex;
+        vb.blockCount = 1;
+        vb.timestamp = vb.versionID;
+
+        fileManager.writeVersionBlock(vb, versionOffset);
+        fileManager.closeFile();
+
+        cout << "✅ Saved version for " << path
+             << " at offset " << versionOffset
+             << " (vID " << vb.versionID << ")\n";
+    }
+
+    // =============================================================
+    // 📜 LIST VERSIONS
+    // =============================================================
+    void listVersions() {
+        fileManager.openFile(omniFileName, 4096);
+        vector<VersionBlock> versions;
+        fileManager.readAllVersions(versions, header.file_state_storage_offset);
+        fileManager.closeFile();
+
+        cout << "\n--- Available Versions (" << versions.size() << ") ---\n";
+        if (versions.empty()) {
+            cout << "No versions found.\n";
+            return;
+        }
+
+        for (auto& v : versions)
+            cout << v.filePath << " | VersionID: " << v.versionID
+                 << " | Block: " << v.startBlock
+                 << " | Time: " << ctime((time_t*)&v.timestamp);
+    }
+
+    // =============================================================
+    // 🔁 REVERT TO OLD VERSION
+    // =============================================================
+    void revertToVersion(uint64_t versionID) {
+        vector<VersionBlock> versions;
+        fileManager.openFile(omniFileName, 4096);
+        fileManager.readAllVersions(versions, header.file_state_storage_offset);
+        fileManager.closeFile();
+
+        for (auto& v : versions) {
+            if (v.versionID == versionID) {
+                cout << "\nRestoring version " << versionID << " of " << v.filePath << "...\n";
+                readFileContent(v.startBlock, 4096);
+                cout << "✅ Version restored.\n";
+                return;
             }
         }
+        cout << "❌ Version ID not found.\n";
     }
-    void modifyFileVersion(const string& path, const string& newData) {
-        writeFileContent(path, newData);
-        logChange(path, "admin", "MODIFY", 2);
-    }
-
-
 };
-
