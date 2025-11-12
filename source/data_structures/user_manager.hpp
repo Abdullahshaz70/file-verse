@@ -280,8 +280,12 @@ public:
         root = deleteNode(root , username);
         return true;
     }
+        bool exists(const string& username) {
+        return isPresent(root, username) != nullptr;
+    }
     
     void print() { inorderPrint(root); }
 
     UserNode* getRoot(){return root;}
+   
 };

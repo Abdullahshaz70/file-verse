@@ -510,32 +510,76 @@ public:
         printTree(root);
     }
 
-    // ==========================================
-    // For saving directory structure to .omni
-    // ==========================================
-    void exportToEntries(vector<FileEntry>& entries, const string& currentPath = "/") {
-        if (!root) return;
-        exportNode(root, currentPath, entries);
+
+// =============================================================
+// 📤 EXPORT (skip the artificial "root" node in paths)
+// =============================================================
+void exportToEntries(vector<FileEntry>& entries) {
+    if (!root) return;
+    // do NOT push "root" itself
+    for (auto* child : root->children) {
+        exportNode(child, "/", entries); // start at "/" directly
     }
+}
 
-    void exportNode(FileNode* node, const string& path, vector<FileEntry>& entries) {
-        if (!node) return;
+void exportNode(FileNode* node, const string& path, vector<FileEntry>& entries) {
+    if (!node) return;
 
-        FileEntry entry;
-        memset(&entry, 0, sizeof(FileEntry));
-        strcpy(entry.name, (path + node->name).c_str());
-        entry.type = node->isFile ? 0 : 1;
-        entry.size = node->isFile ? node->data.size() : 0;
-        entry.permissions = 0644;
-        strcpy(entry.owner, "admin");
-        entry.inode = reinterpret_cast<uint64_t>(node) & 0xFFFFFFFF;
-        entries.push_back(entry);
+    string full = (path == "/") ? ("/" + node->name) : (path + "/" + node->name);
 
-        if (!node->isFile) {
-            for (auto* child : node->children)
-                exportNode(child, path + node->name + "/", entries);
+    FileEntry entry{};
+    memset(&entry, 0, sizeof(FileEntry));
+    strncpy(entry.name, full.c_str(), sizeof(entry.name) - 1);
+    entry.type = node->isFile ? 0 : 1;
+    entry.size = node->isFile ? node->data.size() : 0;
+    entry.permissions = 0644;
+    strncpy(entry.owner, "admin", sizeof(entry.owner) - 1);
+    entry.inode = reinterpret_cast<uint64_t>(node) & 0xFFFFFFFF;
+    entries.push_back(entry);
+
+    if (!node->isFile) {
+        for (auto* child : node->children)
+            exportNode(child, full, entries);
+    }
+}
+
+    // =============================================================
+// 📥 IMPORT (normalize any old '/root' prefix)
+// =============================================================
+void importFromEntries(const vector<FileEntry>& entries) {
+    reset();
+
+    auto ensurePath = [&](const string& fullPath, bool isDir) {
+        vector<string> parts = splitDirectory(fullPath);
+        FileNode* cur = root;
+
+        for (size_t i = 0; i < parts.size(); ++i) {
+            bool last = (i == parts.size() - 1);
+            const string& name = parts[i];
+
+            FileNode* child = nullptr;
+            for (auto* c : cur->children)
+                if (c->name == name) { child = c; break; }
+
+            if (!child) {
+                child = new FileNode(name, last && !isDir, cur);
+                cur->children.push_back(child);
+            }
+            cur = child;
         }
+    };
+
+    for (const auto& e : entries) {
+        if (e.name[0] == '\0') continue;
+        string path = e.name;
+        bool isDir = (e.type == 1);
+        ensurePath(path, isDir);
     }
+}
+
+
+
+
 };
 
 

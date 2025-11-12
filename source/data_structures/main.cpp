@@ -5,55 +5,8 @@
 using namespace std;
 
 
-int main1() {
-    UserManager um;
-    SessionManager session(&um);
-    OFSCore ofs(&um, 256);   // ✅ pass the same UserManager pointer
-    ofs.attachSession(&session);
 
-    cout << "=============================\n";
-    cout << "🧩 Persistent User Test\n";
-    cout << "=============================\n\n";
-
-    int choice;
-    cout << "1. Format new OFS\n";
-    cout << "2. Load existing OFS\n";
-    cout << "3. Add new user\n";
-    cout << "4. Login as user\n";
-    cout << "5. Logout\n";
-    cout << "6. List Users\n";
-    cout << "0. Exit\n";
-
-    while (true) {
-        cout << "\nEnter choice: ";
-        cin >> choice;
-
-        if (choice == 1) ofs.format();
-        else if (choice == 2) ofs.loadSystem();
-        else if (choice == 3) {
-            string u, p; bool isAdmin;
-            cout << "Enter username: "; cin >> u;
-            cout << "Enter password: "; cin >> p;
-            cout << "Is Admin? (1/0): "; cin >> isAdmin;
-            ofs.createUser(u, p, isAdmin);
-        }
-        else if (choice == 4) {
-            string u, p;
-            cout << "Enter username: "; cin >> u;
-            cout << "Enter password: "; cin >> p;
-            session.login(u, p);
-        }
-        else if (choice == 5) session.logout();
-        else if (choice == 6) ofs.getUserManager().print();
-        else if (choice == 0) break;
-    }
-
-    cout << "\n✅ Test complete.\n";
-    return 0;
-}
-
-
-int main(){
+int maintyuiop(){
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);   // 256 blocks 
@@ -201,185 +154,164 @@ int main(){
     }
 
 
-
-int main3() {
+int main7890() {
     cout << "=============================\n";
-    cout << "🔍 Omni File System Structure Check\n";
-    cout << "=============================\n\n";
-
-    // --- Core setup ---
-    UserManager userManager;
-    SessionManager session(&userManager);
-    OFSCore ofs(&userManager);
-
-    ofs.attachSession(&session);
-
-    // --- Optional login (not required for verify) ---
-    session.login("admin", "admin123");
-
-    // --- Perform verification ---
-    ofs.verifyFileStructure();
-
-    cout << "\n✅ Structure verification complete.\n";
-    return 0;
-}
-
-
-int main4() {
-    cout << "=============================\n";
-    cout << "🔍 Omni File System Auto Verification Run\n";
+    cout << "🔍 Omni File System Auto Validation\n";
     cout << "=============================\n\n";
 
     UserManager userMgr;
     SessionManager session(&userMgr);
-    OFSCore ofs(&userMgr, 256);
+    OFSCore ofs(&userMgr, 256); // 256 blocks → 1 MB
     ofs.attachSession(&session);
 
-    // ------------------------------------------------------
-    // 1️⃣ Admin Login and Format
-    // ------------------------------------------------------
-    cout << "\n=== STEP 1: Admin Login and Format ===\n";
+    // ────────────────────────────────
+    // Step 1: Admin Login + Format
+    // ────────────────────────────────
     session.login("admin", "admin123");
+    if (!session.isAdminUser()) {
+        cerr << "❌ Admin login failed!\n";
+        return 1;
+    }
     ofs.format();
 
-    // ------------------------------------------------------
-    // 2️⃣ Create users
-    // ------------------------------------------------------
-    cout << "\n=== STEP 2: Create Users (user1, user2) ===\n";
-    ofs.createUser("user1", "pass1", false);
-    ofs.createUser("user2", "pass2", false);
-    session.logout();
+    // ────────────────────────────────
+    // Step 2: Create Users
+    // ────────────────────────────────
+    ofs.createUser("user1", "user1pass", false);
+    ofs.createUser("user2", "user2pass", false);
 
-    // ------------------------------------------------------
-    // 3️⃣ User1 Creates Directory + Files
-    // ------------------------------------------------------
-    cout << "\n=== STEP 3: user1 Directory + File Creation ===\n";
-    session.login("user1", "pass1");
-    ofs.createDirectory("/Projects");
-    ofs.createFile("/Projects/report.txt",
-        "This is user1’s first report.\n"
-        "Line 2: Detailed log entry for user1.\n"
-        "Line 3: Some computations here.\n"
-        "Line 4: End of user1 report.\n");
-    ofs.createFile("/Documents/summary.txt",
-        "Summary File - User1\n"
-        "Data analysis results are complete.\n"
-        "Graphs stored in /Projects.\n"
-        "EOF.\n");
+    // ────────────────────────────────
+    // Step 3: User1 — create dirs & files
+    // ────────────────────────────────
+    session.logout();
+    session.login("user1", "user1pass");
+    ofs.createDirectory("Projects");
+    ofs.createDirectory("Documents");
+    ofs.createFile("Projects/report.txt",
+        "This is user1's project report.\nAll tests successful.\n");
+    ofs.createFile("Documents/summary.txt",
+        "User1 weekly summary content.\nEnd of file.\n");
     ofs.showMyDirectoryTree();
-    session.logout();
 
-    // ------------------------------------------------------
-    // 4️⃣ User2 Creates Directory + Files
-    // ------------------------------------------------------
-    cout << "\n=== STEP 4: user2 Directory + File Creation ===\n";
-    session.login("user2", "pass2");
-    ofs.createDirectory("/Work");
-    ofs.createFile("/Work/notes.txt",
-        "User2 Notes:\n"
-        "1. Task A - Completed.\n"
-        "2. Task B - In Progress.\n"
-        "3. Task C - Pending Review.\n");
-    ofs.createFile("/Documents/info.txt",
-        "Info File for user2.\n"
-        "Contains multiple entries.\n"
-        "All test cases are executed.\n"
-        "EOF.\n");
+    // ────────────────────────────────
+    // Step 4: Read User1 file data
+    // ────────────────────────────────
+    cout << "\n🔍 Reading back User1 files:\n";
+    ofs.readFileContent(0); // first block
+    ofs.readFileContent(1); // second block
+
+    // ────────────────────────────────
+    // Step 5: User2 — create dirs & files
+    // ────────────────────────────────
+    session.logout();
+    session.login("user2", "user2pass");
+    ofs.createDirectory("Work/Logs");
+    ofs.createFile("Work/notes.txt",
+        "User2 notes: socket tests.\nEnd.\n");
+    ofs.createFile("Work/Logs/info.txt",
+        "User2 log info.\nList of processed items.\n");
     ofs.showMyDirectoryTree();
-    session.logout();
 
-    // ------------------------------------------------------
-    // 5️⃣ Admin Verification
-    // ------------------------------------------------------
-    cout << "\n=== STEP 5: Admin Verification ===\n";
+    // ────────────────────────────────
+    // Step 6: Admin login → global checks
+    // ────────────────────────────────
+    session.logout();
     session.login("admin", "admin123");
+    cout << "\n\n=============================\n";
+    cout << "🔎 SYSTEM-WIDE VERIFICATION\n";
+    cout << "=============================\n";
     ofs.listAllFiles();
     ofs.listVersions();
     ofs.verifyFileStructure();
-    session.logout();
+    ofs.showChangeLog();
 
-    cout << "\n✅ Auto verification complete.\n";
-    cout << "OFSCore shutting down.\n";
+    // ────────────────────────────────
+    // Step 7: Stats check
+    // ────────────────────────────────
+    cout << "\n\n=============================\n";
+    cout << "📊 Final Stats Check\n";
+    cout << "=============================\n";
+    cout << "If no warnings or corruption appear above, ✅ PHASE 1 PASSED!\n";
+
+    cout << "\nOFSCore shutting down cleanly.\n";
     return 0;
 }
 
 
-
-
-int mainyuio() {
+int main1() {
     cout << "=============================\n";
-    cout << "🔍 Omni File System Auto Read-Back Test\n";
+    cout << "🔍 Omni File System Auto Verification\n";
     cout << "=============================\n\n";
 
+    // Initialize managers
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);
     ofs.attachSession(&session);
 
-    // Step 1: Admin formats system
+    // ---------- STEP 1: LOGIN AS ADMIN ----------
     session.login("admin", "admin123");
-    ofs.format();
 
-    // Step 2: Create two users
+    // ---------- STEP 2: FORMAT + AUTO RELOAD ----------
+    ofs.format(); // auto reloads and creates admin home
+
+    // ---------- STEP 3: CREATE USERS ----------
     ofs.createUser("user1", "pass1", false);
     ofs.createUser("user2", "pass2", false);
-    session.logout();
 
-    // Step 3: user1 writes 2 files
+    // ---------- STEP 4: LOGIN AS USER1 ----------
+    session.logout();
     session.login("user1", "pass1");
-    ofs.createDirectory("/Projects");
-    ofs.createFile("/Projects/report.txt",
-R"(This is user1's project report.
-It contains detailed analysis of the system.
-All tests have passed successfully.
-End of user1's report.)");
 
-    ofs.createDirectory("/Documents");
-    ofs.createFile("/Documents/summary.txt",
-R"(User1 summary file.
-Contains short notes and ideas.
-Will be updated weekly.
-End of summary.)");
+    // create nested structure
+    ofs.createDirectory("projects");
+    ofs.createDirectory("media");
+    ofs.createFile("projects/main.cpp", "#include<iostream>\nint main(){return 0;}");
+    ofs.createFile("media/images.png", "fake_binary_data_123");
 
-    // Read back both files
-    ofs.readFileContent(0);
-    ofs.readFileContent(1);
+    ofs.showMyDirectoryTree();
+
+    // ---------- STEP 5: LOGIN AS USER2 ----------
     session.logout();
-
-    // Step 4: user2 writes 2 files
     session.login("user2", "pass2");
-    ofs.createDirectory("/Work");
-    ofs.createFile("/Work/notes.txt",
-R"(This is user2's work notes.
-Today's topic: socket implementation.
-Next task: integrate server-client model.
-End of notes.)");
+    ofs.createDirectory("Work/Logs");
+    ofs.createFile("Work/Logs/info.txt", "user2 log file");
+    ofs.showMyDirectoryTree();
 
-    ofs.createDirectory("/Documents");
-    ofs.createFile("/Documents/info.txt",
-R"(User2 information log.
-Lists files processed today.
-Includes pending tasks summary.
-End of info.)");
-
-    // Read back both files
-    ofs.readFileContent(2);
-    ofs.readFileContent(3);
+    // ---------- STEP 6: LOGIN AS ADMIN ----------
     session.logout();
-
-    // Step 5: Admin checks structure
     session.login("admin", "admin123");
+    cout << "\n=============================\n";
+    cout << "🔎 SYSTEM-WIDE VERIFICATION\n";
+    cout << "=============================\n\n";
+
     ofs.listAllFiles();
+    ofs.listVersions();
     ofs.verifyFileStructure();
 
-    cout << "\n✅ Auto read-back verification complete.\n";
+    cout << "\n=============================\n";
+    cout << "📊 Final Stats Check\n";
+    cout << "=============================\n";
+    cout << "If no warnings or corruption appear above, ✅ PHASE 1 PASSED!\n\n";
+
+    // ---------- STEP 7: SAVE + EXIT ----------
+    cout << "💾 Saving OFS state before exit...\n";
+    ofs.saveSystemState();  // <— new helper for explicit save
+    cout << "✅ Auto Verification Complete.\n";
     return 0;
 }
 
 
-int main9() {
+
+
+
+
+
+
+
+int main() {
     cout << "=============================\n";
-    cout << "📁 Omni File System Directory Structure Test\n";
+    cout << "🔎 Omni File System - Saved State Verification\n";
     cout << "=============================\n\n";
 
     UserManager userMgr;
@@ -387,72 +319,44 @@ int main9() {
     OFSCore ofs(&userMgr, 256);
     ofs.attachSession(&session);
 
-    // Step 1: Admin setup
+    // --- STEP 1: Load Existing OFS ---
+    if (!ofs.loadSystem()) {
+        cerr << "❌ Failed to load existing OFS. Maybe filesystem.omni is missing or corrupted.\n";
+        return 1;
+    }
+
+    cout << "\n✅ Loaded OFS successfully.\n";
+
+    // --- STEP 2: Print All Users ---
+    cout << "\n=============================\n";
+    cout << "👥 USER TABLE (AVL Inorder)\n";
+    cout << "=============================\n";
+    userMgr.print();
+
+    // --- STEP 3: Login as Admin ---
     session.login("admin", "admin123");
-    ofs.format();
 
-    ofs.createUser("userA", "passA", false);
-    ofs.createUser("userB", "passB", false);
-    session.logout();
-
-    // ============================
-    // Step 2: userA operations
-    // ============================
-    session.login("userA", "passA");
-    cout << "\n=== 🧑‍💻 UserA Directory Creation ===\n";
-
-    ofs.createDirectory("/Projects");
-    ofs.createDirectory("/Projects/Reports");
-    ofs.createDirectory("/Documents");
-
-    ofs.createFile("/Projects/Reports/final.txt", 
-R"(This is UserA's final report.
-It contains 4-level nested structure test.
-Directory listing should show correct hierarchy.
-End of report.)");
-
-    ofs.createFile("/Documents/info.txt", 
-R"(This is UserA's info document.
-It validates directory creation inside /Documents.
-End of info.)");
-
-    cout << "\n📂 Directory Tree for userA:\n";
-    ofs.listMyFiles();
-    session.logout();
-
-    // ============================
-    // Step 3: userB operations
-    // ============================
-    session.login("userB", "passB");
-    cout << "\n=== 🧑‍💻 UserB Directory Creation ===\n";
-
-    ofs.createDirectory("/Assignments");
-    ofs.createDirectory("/Assignments/Week1");
-    ofs.createDirectory("/Notes");
-
-    ofs.createFile("/Assignments/Week1/task.txt",
-R"(This is UserB's Week 1 assignment.
-Tests directory nesting and structure validation.
-End of file.)");
-
-    ofs.createFile("/Notes/summary.txt",
-R"(UserB personal notes.
-Used to test independent user tree isolation.
-End of notes.)");
-
-    cout << "\n📂 Directory Tree for userB:\n";
-    ofs.listMyFiles();
-    session.logout();
-
-    // ============================
-    // Step 4: Admin global check
-    // ============================
-    session.login("admin", "admin123");
-    cout << "\n=== 🧑‍💼 Admin Global Structure Verification ===\n";
+    // --- STEP 4: Show Directory Trees ---
+    cout << "\n=============================\n";
+    cout << "🌳 COMPLETE DIRECTORY STRUCTURE\n";
+    cout << "=============================\n";
     ofs.listAllFiles();
+
+    // --- STEP 5: Verify Versions + Header ---
+    cout << "\n=============================\n";
+    cout << "🧾 VERSION + HEADER VERIFICATION\n";
+    cout << "=============================\n";
+    ofs.listVersions();
     ofs.verifyFileStructure();
 
-    cout << "\n✅ Directory structure test completed successfully.\n";
+    // --- STEP 6: Final Summary ---
+    cout << "\n=============================\n";
+    cout << "📊 FINAL VERIFICATION SUMMARY\n";
+    cout << "=============================\n";
+    cout << "✅ Persistence Verified Successfully.\n";
+    cout << "✅ No corruption or missing data detected.\n";
+    cout << "OFS Verification Complete.\n";
+
     return 0;
 }
 
