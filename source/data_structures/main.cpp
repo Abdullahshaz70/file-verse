@@ -79,6 +79,8 @@ int main2() {
              << "11. List all versions\n"
              << "12. Revert to version\n"
              << "13. List users (AVL Inorder)\n"
+             << "14. List My Files\n"
+             <<"15. List All Files (Admin)\n"
              << "0. Exit\n"
              << "=================================\n"
              << "Enter choice: ";
@@ -156,6 +158,13 @@ int main2() {
         case 13:
             userMgr.print();
             break;
+        case 14:
+            ofs.listMyFiles();
+            break;
+
+        case 15:
+            ofs.listAllFiles();
+        break;
 
         default:
             cout << "⚠️  Invalid option.\n";
@@ -167,7 +176,7 @@ int main2() {
 }
 
 
-int main() {
+int main3() {
     cout << "=============================\n";
     cout << "🔍 Omni File System Structure Check\n";
     cout << "=============================\n\n";
@@ -184,6 +193,66 @@ int main() {
 
     // --- Perform verification ---
     ofs.verifyFileStructure();
+
+    cout << "\n✅ Structure verification complete.\n";
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int main() {
+    cout << "=============================\n";
+    cout << "🔍 Omni File System Structure Check\n";
+    cout << "=============================\n\n";
+
+    // Initialize managers
+    UserManager userMgr;
+    SessionManager session(&userMgr);
+    OFSCore ofs(&userMgr, 256);   // 256 blocks = 1MB
+    ofs.attachSession(&session);
+
+    // 1️⃣ Login as admin (default)
+    session.login("admin", "admin123");
+
+    // 2️⃣ Format new filesystem
+    ofs.format();
+
+    // 3️⃣ Create two normal users
+    ofs.createUser("user1", "pass1", false);
+    ofs.createUser("user2", "pass2", false);
+
+    // 4️⃣ Login as user1 and write sample file
+    session.logout();
+    session.login("user1", "pass1");
+    ofs.writeFileContent("/Documents/readme.txt", "This is version 1 of readme.txt");
+
+    // 5️⃣ Write a modified version
+    ofs.writeFileContent("/Documents/readme.txt", "This is version 2 of readme.txt");
+
+    // 6️⃣ Login as user2 and write their file
+    session.logout();
+    session.login("user2", "pass2");
+    ofs.writeFileContent("/Documents/readme.txt", "This is user2’s document.");
+
+    // 7️⃣ Logout and login as admin again
+    session.logout();
+    session.login("admin", "admin123");
+
+    // 8️⃣ Verify structure
+    ofs.verifyFileStructure();
+
+    ofs.listAllFiles();
 
     cout << "\n✅ Structure verification complete.\n";
     return 0;

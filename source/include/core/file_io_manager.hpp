@@ -16,6 +16,8 @@ class FileIOManager {
 public:
     FileIOManager() = default;
 
+
+
     // =====================================================
     //  Create new .omni file
     // =====================================================
@@ -47,15 +49,16 @@ public:
     //  Open file for read/write
     // =====================================================
     bool openFile(const string& path, uint64_t blockSize) {
-    if (file.is_open()) file.close();
-    file.open(path, ios::in | ios::out | ios::binary);  // ✅ read + write
-    if (!file.is_open()) {
-        cerr << "❌ Could not open file: " << path << endl;
-        return false;
+        if (file.is_open()) file.close();
+        file.open(path, ios::in | ios::out | ios::binary);
+        if (!file.is_open()) {
+            cerr << "❌ Could not open file: " << path << endl;
+            return false;
+        }
+        this->blockSize = blockSize;
+        fileName = path;
+        return true;
     }
-    this->blockSize = blockSize;
-    return true;
-}
 
     // =====================================================
     //  Write header safely (always from start)
@@ -90,33 +93,31 @@ public:
     }
 
     // =====================================================
-    //  Safe header read (always resets pointer to start)
+    //  ✅ Fixed header read (uses open stream)
     // =====================================================
     bool readHeader(OMNIHeader& outHeader) {
-    if (!file.is_open()) {
-        file.open(fileName, ios::in | ios::out | ios::binary);
         if (!file.is_open()) {
-            cerr << "❌ Error: Could not open " << fileName << " for reading header.\n";
+            cerr << "❌ Error: .omni file not open while reading header.\n";
             return false;
         }
+
+        file.clear();                      // clear flags (EOF etc.)
+        file.seekg(0, ios::beg);           // go to start
+        file.read(reinterpret_cast<char*>(&outHeader), sizeof(OMNIHeader));
+
+        if (file.gcount() != sizeof(OMNIHeader)) {
+            cerr << "❌ Error: Incomplete header read.\n";
+            return false;
+        }
+
+        if (strcmp(outHeader.magic, "OMNIFS01") != 0) {
+            cerr << "❌ ERROR: Invalid header magic read ('" << outHeader.magic << "').\n";
+            return false;
+        }
+
+        cout << "✅ Header read successfully (Verified).\n";
+        return true;
     }
-
-    file.seekg(0, ios::beg);
-    file.read(reinterpret_cast<char*>(&outHeader), sizeof(OMNIHeader));
-
-    if (file.gcount() != sizeof(OMNIHeader)) {
-        cerr << "❌ Error: Incomplete header read.\n";
-        return false;
-    }
-
-    if (strcmp(outHeader.magic, "OMNIFS01") != 0) {
-        cerr << "❌ ERROR: Invalid header magic read ('" << outHeader.magic << "').\n";
-        return false;
-    }
-
-    cout << "✅ Header read successfully (Verified).\n";
-    return true;     // ✅ Don’t close file here — stay open for subsequent writes
-}
 
     // =====================================================
     //  Write and read data blocks
@@ -199,7 +200,7 @@ public:
     }
 
     // =====================================================
-    //  Write and read directory metadata
+    //  Directory Metadata
     // =====================================================
     bool writeFileEntries(const vector<FileEntry>& entries, uint64_t offset) {
         if (!file.is_open()) return false;
@@ -245,7 +246,7 @@ public:
     }
 
     // =====================================================
-    //  Version Block I/O (Versioning System)
+    //  Version Block I/O
     // =====================================================
     bool writeVersionBlock(const VersionBlock& vb, uint64_t offset) {
         if (!file.is_open()) {
@@ -269,7 +270,6 @@ public:
 
     bool readAllVersions(vector<VersionBlock>& list, uint64_t offset) {
         if (!file.is_open()) return false;
-
         file.seekg(offset, ios::beg);
         VersionBlock vb{};
         list.clear();
@@ -282,16 +282,13 @@ public:
         }
 
         if (file.eof()) file.clear();
-
         cout << "🧾 Version blocks read successfully: " << list.size() << endl;
         return true;
     }
 
-
-    // ================================================
-    // 🔐 Persistent User Table Management
-    // ================================================
-
+    // =====================================================
+    //  User Table Persistence
+    // =====================================================
     bool saveUsers(const vector<UserInfo>& users, uint64_t offset) {
         if (!file.is_open()) {
             cerr << "❌ Error: File not open while saving users.\n";
@@ -299,9 +296,8 @@ public:
         }
 
         file.seekp(offset, ios::beg);
-        for (const auto& user : users) {
+        for (const auto& user : users)
             file.write(reinterpret_cast<const char*>(&user), sizeof(UserInfo));
-        }
         file.flush();
         cout << "✅ Saved " << users.size() << " users to .omni file.\n";
         return true;
@@ -309,7 +305,6 @@ public:
 
     bool loadUsers(vector<UserInfo>& users, uint64_t offset, uint32_t count) {
         if (!file.is_open()) {
-            // Auto-open if needed
             file.open(fileName, ios::in | ios::binary);
             if (!file.is_open()) {
                 cerr << "❌ Error: Could not open file while loading users.\n";
@@ -333,9 +328,6 @@ public:
         }
     }
 
-    // =====================================================
-    //  Close file cleanly
-    // =====================================================
     void closeFile() {
         if (file.is_open()) {
             file.close();
@@ -343,5 +335,6 @@ public:
         }
     }
 
-
+    // Access underlying stream safely (used by OFSCore)
+    fstream& File() { return file; }
 };

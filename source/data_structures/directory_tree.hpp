@@ -42,7 +42,29 @@ class DirectoryTree{
 
     }
 
-    FileNode* findNodeByPath(const string& path){
+  
+    void deleteNodeRec(FileNode* node){
+        if (!node) return; 
+        for (auto* child : node->children)
+            deleteNodeRec(child);
+        node->children.clear(); 
+        delete node;
+    }
+
+    
+
+
+
+
+public:
+
+    DirectoryTree():root(nullptr){root = new FileNode("root", false, nullptr); }
+    ~DirectoryTree() { 
+        deleteNodeRec(root);
+        root = nullptr;
+    }
+
+      FileNode* findNodeByPath(const string& path){
 
         if(!root)
             return nullptr;
@@ -68,27 +90,6 @@ class DirectoryTree{
         }
         return curr;
 
-    }
-
-    void deleteNodeRec(FileNode* node){
-        if (!node) return; 
-        for (auto* child : node->children)
-            deleteNodeRec(child);
-        node->children.clear(); 
-        delete node;
-    }
-
-    
-
-
-
-
-public:
-
-    DirectoryTree():root(nullptr){root = new FileNode("root", false, nullptr); }
-    ~DirectoryTree() { 
-        deleteNodeRec(root);
-        root = nullptr;
     }
 
 
@@ -221,6 +222,50 @@ void exportNode(FileNode* node, const string& path, vector<FileEntry>& entries) 
             exportNode(child, path + node->name + "/", entries);
     }
 }
+
+
+
+
+// ================================
+// 🏠 User-based directory helpers
+// ================================
+bool ensureHomeBase() {
+    // Ensure /home directory exists
+    FileNode* home = findNodeByPath("/home");
+    if (!home) {
+        return createDirectory("/", "home");
+    }
+    return true;
+}
+
+bool createUserHome(const string& username) {
+    ensureHomeBase();
+    // check if already exists
+    FileNode* existing = findNodeByPath("/home/" + username);
+    if (existing) return false;  // already has home dir
+    return createDirectory("/home", username);
+}
+
+
+
+// Recursively print files for a specific user
+void listUserFiles(const string& username, const string& path = "/home/") {
+    FileNode* home = findNodeByPath("/home/" + username);
+
+    if (!home) {
+        cout << "❌ No directory found for user '" << username << "'.\n";
+        return;
+    }
+    cout << "📂 Files for user " << username << ":\n";
+    printTree(home, 1);
+}
+
+// Print entire tree (admin only)
+void listAll() {
+    cout << "\n🌳 Complete File System Tree:\n";
+    printTree(root);
+}
+
 
 
 };
