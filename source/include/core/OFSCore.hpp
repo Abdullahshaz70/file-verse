@@ -728,5 +728,50 @@ if (!dirPart.empty())
 }
 
 
+// =============================================================
+// 🗑️ DELETE FILE OR DIRECTORY (PUBLIC WRAPPERS)
+// =============================================================
+bool deleteFile(const string& relPath) {
+    if (!session || !session->isLoggedIn()) {
+        cerr << "❌ Login required to delete files.\n";
+        return false;
+    }
+    string username = session->getCurrentUser();
+    string fullPath = "/home/" + username + relPath;
+    if (dirTree.deleteFile(fullPath)) {
+        // persist change
+        vector<FileEntry> entries;
+        dirTree.exportToEntries(entries);
+        fileManager.openFile(omniFileName, 4096);
+        fileManager.writeFileEntries(entries, header.header_size + (10 * sizeof(UserInfo)) + totalBlocks);
+        fileManager.closeFile();
+        updateStats();
+        return true;
+    }
+    return false;
+}
+
+bool deleteDirectory(const string& relPath) {
+    if (!session || !session->isLoggedIn()) {
+        cerr << "❌ Login required to delete directories.\n";
+        return false;
+    }
+    string username = session->getCurrentUser();
+    string fullPath = "/home/" + username + relPath;
+    if (dirTree.deleteDirectoryRecursive(fullPath)) {
+        // persist change
+        vector<FileEntry> entries;
+        dirTree.exportToEntries(entries);
+        fileManager.openFile(omniFileName, 4096);
+        fileManager.writeFileEntries(entries, header.header_size + (10 * sizeof(UserInfo)) + totalBlocks);
+        fileManager.closeFile();
+        updateStats();
+        return true;
+    }
+    return false;
+}
+
+
+
 };
 

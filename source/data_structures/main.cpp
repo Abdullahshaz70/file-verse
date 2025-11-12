@@ -6,7 +6,7 @@ using namespace std;
 
 
 
-int maintyuiop(){
+int main(){
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);   // 256 blocks 
@@ -18,28 +18,30 @@ int maintyuiop(){
 
     int choice;
     while (true) {
-        cout << "\n=========== MAIN MENU ===========\n"
-             << "1. Format new OFS (Admin)\n"
-             << "2. Load existing OFS\n"
-             << "3. Add new user (Admin)\n"
-             << "4. Login as user\n"
-             << "5. Logout\n"
-             << "6. Write sample file\n"
-             << "7. Read file data\n"
-             << "8. View system stats\n"
-             << "9. View change log\n"
-             << "10. Modify file (new version)\n"
-             << "11. List all versions\n"
-             << "12. Revert to version\n"
-             << "13. List users (AVL Inorder)\n"
-             << "14. List My Files\n"
-             <<"15. List All Files (Admin)\n"
-             "16. Create new directory\n"
-             "17. Create new file\n"
-             "18. Show my directory tree\n"
-             << "0. Exit\n"
-             << "=================================\n"
-             << "Enter choice: ";
+        cout<< "\n=========== MAIN MENU ===========\n"
+            << "1. Format new OFS (Admin)\n"
+            << "2. Load existing OFS\n"
+            << "3. Add new user (Admin)\n"
+            << "4. Login as user\n"
+            << "5. Logout\n"
+            << "6. Write sample file\n"
+            << "7. Read file data\n"
+            << "8. View system stats\n"
+            << "9. View change log\n"
+            << "10. Modify file (new version)\n"
+            << "11. List all versions\n"
+            << "12. Revert to version\n"
+            << "13. List users (AVL Inorder)\n"
+            << "14. List My Files\n"
+            <<"15. List All Files (Admin)\n"
+            <<"16. Create new directory\n"
+            <<"17. Create new file\n"
+            <<"18. Show my directory tree\n"
+            <<"19. Delete File\n"
+            <<"20. Delete Directory\n"
+            << "0. Exit\n"
+            << "=================================\n"
+            << "Enter choice: ";
 
         cin >> choice;
         cin.ignore();
@@ -142,6 +144,24 @@ int maintyuiop(){
     case 18:
         ofs.showMyDirectoryTree();
         break;
+
+    
+    case 19: {
+        string p;
+        cout << "Enter file path (relative to home): ";
+        getline(cin, p);
+        ofs.deleteFile(p);
+        break;
+    }
+    case 20: {
+        string p;
+        cout << "Enter directory path (relative to home): ";
+        getline(cin, p);
+        ofs.deleteDirectory(p);
+        break;
+    }
+
+    
 
 
         default:
@@ -302,14 +322,7 @@ int main1() {
 }
 
 
-
-
-
-
-
-
-
-int main() {
+int main567890() {
     cout << "=============================\n";
     cout << "🔎 Omni File System - Saved State Verification\n";
     cout << "=============================\n\n";
