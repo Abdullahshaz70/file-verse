@@ -377,6 +377,84 @@ End of info.)");
 }
 
 
+int main9() {
+    cout << "=============================\n";
+    cout << "📁 Omni File System Directory Structure Test\n";
+    cout << "=============================\n\n";
+
+    UserManager userMgr;
+    SessionManager session(&userMgr);
+    OFSCore ofs(&userMgr, 256);
+    ofs.attachSession(&session);
+
+    // Step 1: Admin setup
+    session.login("admin", "admin123");
+    ofs.format();
+
+    ofs.createUser("userA", "passA", false);
+    ofs.createUser("userB", "passB", false);
+    session.logout();
+
+    // ============================
+    // Step 2: userA operations
+    // ============================
+    session.login("userA", "passA");
+    cout << "\n=== 🧑‍💻 UserA Directory Creation ===\n";
+
+    ofs.createDirectory("/Projects");
+    ofs.createDirectory("/Projects/Reports");
+    ofs.createDirectory("/Documents");
+
+    ofs.createFile("/Projects/Reports/final.txt", 
+R"(This is UserA's final report.
+It contains 4-level nested structure test.
+Directory listing should show correct hierarchy.
+End of report.)");
+
+    ofs.createFile("/Documents/info.txt", 
+R"(This is UserA's info document.
+It validates directory creation inside /Documents.
+End of info.)");
+
+    cout << "\n📂 Directory Tree for userA:\n";
+    ofs.listMyFiles();
+    session.logout();
+
+    // ============================
+    // Step 3: userB operations
+    // ============================
+    session.login("userB", "passB");
+    cout << "\n=== 🧑‍💻 UserB Directory Creation ===\n";
+
+    ofs.createDirectory("/Assignments");
+    ofs.createDirectory("/Assignments/Week1");
+    ofs.createDirectory("/Notes");
+
+    ofs.createFile("/Assignments/Week1/task.txt",
+R"(This is UserB's Week 1 assignment.
+Tests directory nesting and structure validation.
+End of file.)");
+
+    ofs.createFile("/Notes/summary.txt",
+R"(UserB personal notes.
+Used to test independent user tree isolation.
+End of notes.)");
+
+    cout << "\n📂 Directory Tree for userB:\n";
+    ofs.listMyFiles();
+    session.logout();
+
+    // ============================
+    // Step 4: Admin global check
+    // ============================
+    session.login("admin", "admin123");
+    cout << "\n=== 🧑‍💼 Admin Global Structure Verification ===\n";
+    ofs.listAllFiles();
+    ofs.verifyFileStructure();
+
+    cout << "\n✅ Directory structure test completed successfully.\n";
+    return 0;
+}
 
 
 
