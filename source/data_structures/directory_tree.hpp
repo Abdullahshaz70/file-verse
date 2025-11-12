@@ -357,19 +357,36 @@ public:
         return curr;
     }
 
-    bool createDirectory(const string& path, const string& name) {
-        FileNode* parent = findNodeByPath(path);
-        if (!parent) return false;
+ bool createDirectory(const string& basePath, const string& relativePath) {
+    if (relativePath.empty()) return false;
 
-        // prevent duplicates
-        for (auto* c : parent->children)
-            if (!c->isFile && c->name == name)
-                return false;
+    vector<string> parts = splitDirectory(relativePath);
+    FileNode* current = findNodeByPath(basePath);
+    if (!current) return false;
 
-        FileNode* newDir = new FileNode(name, false, parent);
-        parent->children.push_back(newDir);
-        return true;
+    for (const string& part : parts) {
+        // Skip empty parts
+        if (part.empty()) continue;
+
+        // Check if directory already exists
+        FileNode* next = nullptr;
+        for (auto* c : current->children) {
+            if (!c->isFile && c->name == part) {
+                next = c;
+                break;
+            }
+        }
+
+        if (!next) {
+            next = new FileNode(part, false, current);
+            current->children.push_back(next);
+        }
+        current = next;
     }
+
+    return true;
+}
+
 
     bool createFile(const string& path, const string& name, const string& data) {
         if (!root) return false;

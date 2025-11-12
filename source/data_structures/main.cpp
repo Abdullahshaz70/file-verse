@@ -53,7 +53,7 @@ int main1() {
 }
 
 
-int main2() {
+int main(){
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);   // 256 blocks 
@@ -306,7 +306,7 @@ int main4() {
 
 
 
-int main() {
+int mainyuio() {
     cout << "=============================\n";
     cout << "🔍 Omni File System Auto Read-Back Test\n";
     cout << "=============================\n\n";

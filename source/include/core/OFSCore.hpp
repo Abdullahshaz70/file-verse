@@ -63,6 +63,8 @@ public:
         cout << "Default admin (admin / admin123) created.\n";
         cout << "OFSCore initialized with " << blocks
              << " blocks (" << totalSize / 1024 << " KB)." << endl;
+
+        dirTree.createUserHome("admin");
     }
 
     ~OFSCore() { cout << "OFSCore shutting down." << endl; }
@@ -80,6 +82,10 @@ public:
         cout << "🧹 Formatting OFS...\n";
         spaceManager.reset();
         dirTree.reset();
+
+        dirTree.ensureHomeBase();
+        dirTree.createUserHome("admin");
+
 
         const uint64_t blockSize = 4096;
         const uint64_t totalSize = totalBlocks * blockSize;
@@ -601,15 +607,20 @@ void createFile(const string& relativePath, const string& content) {
     string base = "/home/" + username;
     string fullPath = base + "/" + cleanPath;
 
-    // Ensure directory exists before file write
+    // Ensure all intermediate directories exist
     size_t lastSlash = cleanPath.find_last_of('/');
-    if (lastSlash != string::npos) {
-        string dirPart = cleanPath.substr(0, lastSlash);
-        dirTree.createDirectory(base, dirPart);
-    }
+string dirPart = (lastSlash != string::npos) ? cleanPath.substr(0, lastSlash) : "";
+if (!dirPart.empty())
+    dirTree.createDirectory(base, dirPart);
 
-    // Write directly without adding "Documents" again
+
+    // Write file data to .omni
     if (writeFileContent("/" + cleanPath, content)) {
+        // ✅ Add file node in the in-memory directory tree
+        string dirPart = (lastSlash != string::npos) ? cleanPath.substr(0, lastSlash) : "";
+        string fileName = (lastSlash != string::npos) ? cleanPath.substr(lastSlash + 1) : cleanPath;
+        dirTree.createFile(base + "/" + dirPart, fileName, content);
+
         cout << "✅ File created successfully at: " << fullPath << endl;
     } else {
         cerr << "❌ Failed to create file at: " << fullPath << endl;
