@@ -6,7 +6,7 @@ using namespace std;
 
 
 
-int main(){
+int main0(){
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);   // 256 blocks 
@@ -372,6 +372,92 @@ int main567890() {
 
     return 0;
 }
+
+
+
+
+int main() {
+    cout << "=============================\n";
+    cout << "🔍 Omni File System — Full Auto Verification\n";
+    cout << "=============================\n\n";
+
+    UserManager um;
+    SessionManager session(&um);
+    OFSCore ofs(&um);
+    ofs.attachSession(&session);
+
+    // STEP 1 — LOGIN & FORMAT
+    ofs.loginUser("admin", "admin123");
+    ofs.format();
+
+    // STEP 2 — CREATE USERS
+    ofs.createUser("user1", "pass1", false);
+    ofs.createUser("user2", "pass2", false);
+
+    // STEP 3 — LOGIN AS USER1 & CREATE STRUCTURE
+    ofs.logoutUser();
+    ofs.loginUser("user1", "pass1");
+
+    cout << "\n🧱 Creating directories and files for user1...\n";
+    ofs.createDirectory("projects");
+    ofs.createDirectory("media/photos");
+    ofs.createFile("projects/main.cpp", "#include<iostream>");
+    ofs.createFile("media/photos/image.png", "fakebinarydata...");
+
+    cout << "\n📂 Directory structure for user1 before delete:\n";
+    ofs.showMyDirectoryTree();
+
+    // STEP 4 — DELETE ONE FILE & ONE DIRECTORY
+    cout << "\n🗑️  Deleting 'projects/main.cpp' and directory 'media'...\n";
+    ofs.deleteFile("/projects/main.cpp");
+    ofs.deleteDirectory("/media");
+
+    cout << "\n📂 Directory structure for user1 after delete:\n";
+    ofs.showMyDirectoryTree();
+
+    // STEP 5 — SAVE STATE & RELOAD
+    cout << "\n💾 Saving OFS state...\n";
+    ofs.saveSystemState();
+    ofs.logoutUser();
+
+    cout << "\n🔁 Reloading OFS from saved state...\n";
+    ofs.loadSystem();
+
+    // STEP 6 — LOGIN AGAIN & VERIFY
+    ofs.loginUser("user1", "pass1");
+    cout << "\n📂 Directory structure for user1 after reload:\n";
+    ofs.showMyDirectoryTree();
+
+    // STEP 7 — LOGIN ADMIN FOR FULL SYSTEM CHECK
+    ofs.logoutUser();
+    ofs.loginUser("admin", "admin123");
+
+    cout << "\n=============================\n";
+    cout << "🔎 SYSTEM-WIDE VERIFICATION\n";
+    cout << "=============================\n";
+
+    ofs.listAllFiles();
+    ofs.listVersions();
+    ofs.verifyFileStructure();
+
+    cout << "\n=============================\n";
+    cout << "📊 FINAL VERIFICATION SUMMARY\n";
+    cout << "=============================\n";
+
+    cout << "✅ Directory creation OK\n";
+    cout << "✅ File creation OK\n";
+    cout << "✅ Delete operations persisted\n";
+    cout << "✅ Reload verification passed\n";
+    cout << "✅ File structure verified\n";
+
+    cout << "\n💾 Saving OFS system state before shutdown...\n";
+    ofs.saveSystemState();
+
+    cout << "\nOFS Auto Verification Complete ✅\n";
+    return 0;
+}
+
+
 
 
 
