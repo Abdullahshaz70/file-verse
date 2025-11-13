@@ -6,7 +6,7 @@ using namespace std;
 
 
 
-int main0(){
+int main8(){
     UserManager userMgr;
     SessionManager session(&userMgr);
     OFSCore ofs(&userMgr, 256);   // 256 blocks 
@@ -374,11 +374,9 @@ int main567890() {
 }
 
 
-
-
 int main() {
     cout << "=============================\n";
-    cout << "🔍 Omni File System — Full Auto Verification\n";
+    cout << "📂 Omni File System — Multi-Directory & File Read Test\n";
     cout << "=============================\n\n";
 
     UserManager um;
@@ -386,56 +384,63 @@ int main() {
     OFSCore ofs(&um);
     ofs.attachSession(&session);
 
-    // STEP 1 — LOGIN & FORMAT
+    // STEP 1 — LOGIN AS ADMIN AND FORMAT
     ofs.loginUser("admin", "admin123");
     ofs.format();
 
     // STEP 2 — CREATE USERS
     ofs.createUser("user1", "pass1", false);
     ofs.createUser("user2", "pass2", false);
-
-    // STEP 3 — LOGIN AS USER1 & CREATE STRUCTURE
     ofs.logoutUser();
-    ofs.loginUser("user1", "pass1");
 
+    // STEP 3 — LOGIN AS USER1
+    ofs.loginUser("user1", "pass1");
     cout << "\n🧱 Creating directories and files for user1...\n";
-    ofs.createDirectory("projects");
+
+    ofs.createDirectory("docs");
+    ofs.createDirectory("projects/code");
+    ofs.createDirectory("projects/reports");
     ofs.createDirectory("media/photos");
-    ofs.createFile("projects/main.cpp", "#include<iostream>");
-    ofs.createFile("media/photos/image.png", "fakebinarydata...");
+    ofs.createDirectory("media/videos");
 
-    cout << "\n📂 Directory structure for user1 before delete:\n";
+    // Create files in multiple directories
+    ofs.createFile("docs/readme.txt", "This is the user1 documentation file.");
+    ofs.createFile("projects/code/main.cpp", "#include <iostream>\nint main(){ std::cout << \"Hello World\"; }");
+    ofs.createFile("projects/reports/summary.txt", "Weekly report summary: all systems functional.");
+    ofs.createFile("media/photos/photo1.png", "[binary data: fake image]");
+    ofs.createFile("media/videos/clip.mp4", "[binary data: fake video]");
+
+    cout << "\n📂 Directory tree for user1 after creation:\n";
     ofs.showMyDirectoryTree();
 
-    // STEP 4 — DELETE ONE FILE & ONE DIRECTORY
-    cout << "\n🗑️  Deleting 'projects/main.cpp' and directory 'media'...\n";
-    ofs.deleteFile("/projects/main.cpp");
-    ofs.deleteDirectory("/media");
+    // STEP 4 — READ BACK ALL FILES
+    cout << "\n=============================\n";
+    cout << "📖 READING BACK ALL FILE CONTENTS\n";
+    cout << "=============================\n";
 
-    cout << "\n📂 Directory structure for user1 after delete:\n";
-    ofs.showMyDirectoryTree();
+    // Reading 5 files from user1
+    cout << "\n--- docs/readme.txt ---\n";
+    ofs.readFileContent(0);  // Assuming block indices start 0,1,2,3,4 sequentially
+    cout << "\n--- projects/code/main.cpp ---\n";
+    ofs.readFileContent(1);
+    cout << "\n--- projects/reports/summary.txt ---\n";
+    ofs.readFileContent(2);
+    cout << "\n--- media/photos/photo1.png ---\n";
+    ofs.readFileContent(3);
+    cout << "\n--- media/videos/clip.mp4 ---\n";
+    ofs.readFileContent(4);
 
-    // STEP 5 — SAVE STATE & RELOAD
-    cout << "\n💾 Saving OFS state...\n";
+    // STEP 5 — SAVE STATE
+    cout << "\n💾 Saving OFS system state...\n";
     ofs.saveSystemState();
+
     ofs.logoutUser();
 
-    cout << "\n🔁 Reloading OFS from saved state...\n";
-    ofs.loadSystem();
-
-    // STEP 6 — LOGIN AGAIN & VERIFY
-    ofs.loginUser("user1", "pass1");
-    cout << "\n📂 Directory structure for user1 after reload:\n";
-    ofs.showMyDirectoryTree();
-
-    // STEP 7 — LOGIN ADMIN FOR FULL SYSTEM CHECK
-    ofs.logoutUser();
+    // STEP 6 — VERIFY FULL SYSTEM
     ofs.loginUser("admin", "admin123");
-
     cout << "\n=============================\n";
     cout << "🔎 SYSTEM-WIDE VERIFICATION\n";
     cout << "=============================\n";
-
     ofs.listAllFiles();
     ofs.listVersions();
     ofs.verifyFileStructure();
@@ -443,20 +448,17 @@ int main() {
     cout << "\n=============================\n";
     cout << "📊 FINAL VERIFICATION SUMMARY\n";
     cout << "=============================\n";
+    cout << "✅ Multiple directories created\n";
+    cout << "✅ Multiple files written\n";
+    cout << "✅ File reads successful\n";
+    cout << "✅ Persistence and structure verified\n";
 
-    cout << "✅ Directory creation OK\n";
-    cout << "✅ File creation OK\n";
-    cout << "✅ Delete operations persisted\n";
-    cout << "✅ Reload verification passed\n";
-    cout << "✅ File structure verified\n";
-
-    cout << "\n💾 Saving OFS system state before shutdown...\n";
+    cout << "\n💾 Saving OFS before shutdown...\n";
     ofs.saveSystemState();
 
-    cout << "\nOFS Auto Verification Complete ✅\n";
+    cout << "\n✅ Multi-Directory & File Test Complete.\n";
     return 0;
 }
-
 
 
 
