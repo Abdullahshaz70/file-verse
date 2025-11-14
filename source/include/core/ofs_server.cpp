@@ -70,6 +70,11 @@ void handleClient(int clientSock) {
             ofs.format();
             reply = "OK|FORMATTED\n";
         }
+        else if (cmd == "LOAD") {
+            bool ok = ofs.loadSystem();
+            reply = ok ? "OK|LOADED\n" : "ERR|LOAD_FAILED\n";
+        }
+
 
         else if (cmd == "CREATE_USER") {
             ofs.createUser(parts[1], parts[2], parts[3] == "1");
