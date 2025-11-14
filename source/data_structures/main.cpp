@@ -28,9 +28,9 @@ int main8(){
             << "7. Read file data\n"
             << "8. View system stats\n"
             << "9. View change log\n"
-            << "10. Modify file (new version)\n"
-            << "11. List all versions\n"
-            << "12. Revert to version\n"
+            // << "10. Modify file (new version)\n"
+            // << "11. List all versions\n"
+            // << "12. Revert to version\n"
             << "13. List users (AVL Inorder)\n"
             << "14. List My Files\n"
             <<"15. List All Files (Admin)\n"
@@ -374,7 +374,7 @@ int main567890() {
 }
 
 
-int main() {
+int main4() {
     cout << "=============================\n";
     cout << "📂 Omni File System — Multi-Directory & File Read Test\n";
     cout << "=============================\n\n";

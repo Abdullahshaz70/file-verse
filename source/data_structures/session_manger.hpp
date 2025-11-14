@@ -87,4 +87,10 @@ string getCurrentUser() const { return current.active ? current.username : "None
         cout << "🕒 Login Time: " << ctime(&current.loginTime);
         cout << "⚙️ Operations performed: " << current.operations << endl;
     }
+
+    void forceSetUser(const std::string& username) {
+    current.username = username;
+    }
+
+
 };
