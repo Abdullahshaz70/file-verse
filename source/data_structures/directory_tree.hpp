@@ -134,6 +134,22 @@ public:
     }
 
 
+    // Wrapper: create all directory levels automatically
+bool createDirectoryRecursive(const string& fullPath) {
+    if (fullPath.empty()) return false;
+
+    // Extract base path: everything before last '/'
+    size_t pos = fullPath.find_last_of('/');
+    if (pos == string::npos) return false;
+
+    string base = fullPath.substr(0, pos);
+    string rel  = fullPath.substr(pos + 1);
+
+    return createDirectory(base, rel);
+}
+
+
+
     // =============================================================
 // 🗑️ DELETE FILE OR DIRECTORY (Recursive)
 // =============================================================

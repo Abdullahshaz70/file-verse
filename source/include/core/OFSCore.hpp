@@ -379,6 +379,19 @@ bool loadSystem() {
     isInitialized = true;
     updateStats();
     cout << "✅ Directory tree rebuilt from saved metadata.\n";
+
+
+
+    // Ensure base directory exists
+    dirTree.ensureHomeBase();
+
+    // Ensure each active user has a home directory
+    for (auto& u : userTable) {
+        if (u.is_active && strlen(u.username) > 0)
+            dirTree.createUserHome(u.username);
+    }
+
+
     return true;
 }
 
@@ -694,55 +707,113 @@ void listAllFiles() {
 // =============================================================
 // 🏗️ Create a new directory for current user
 // =============================================================
+
+
 void createDirectory(const string& path) {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Login required to create directory.\n";
         return;
     }
 
-    string username = session->getCurrentUser();
-    string cleanPath = (path[0] == '/') ? path.substr(1) : path;
-    string base = "/home/" + username;
-    string fullPath = base + "/" + cleanPath;
+    string full = normalizeUserPath(path);
 
-    if (dirTree.createDirectory(base, cleanPath)) {
-        cout << "📁 Directory created at: " << fullPath << endl;
+    // Parent and directory name
+    size_t pos = full.find_last_of('/');
+    string parent = full.substr(0, pos);
+    string name   = full.substr(pos + 1);
+
+    if (dirTree.createDirectory(parent, name)) {
+        cout << "📁 Directory created at: " << full << endl;
     } else {
-        cerr << "⚠️ Failed to create directory at " << fullPath << endl;
+        cerr << "⚠️ Failed to create directory at " << full << endl;
     }
 }
+
+
+// void createDirectory(const string& path) {
+//     if (!session || !session->isLoggedIn()) {
+//         cerr << "❌ Login required to create directory.\n";
+//         return;
+//     }
+
+//     string username = session->getCurrentUser();
+//     string cleanPath = (path[0] == '/') ? path.substr(1) : path;
+//     string base = "/home/" + username;
+//     string fullPath = base + "/" + cleanPath;
+
+//     if (dirTree.createDirectory(base, cleanPath)) {
+//         cout << "📁 Directory created at: " << fullPath << endl;
+//     } else {
+//         cerr << "⚠️ Failed to create directory at " << fullPath << endl;
+//     }
+// }
+
+
+
 
 // =============================================================
 // 📝 Create a new file and write content (custom path)
 // =============================================================
 
 
-void createFile(const string& fullPath, const string& content) {
+
+void createFile(const string& relativePath, const string& content) {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Login required to create file.\n";
         return;
     }
 
-    // ✔ fullPath already normalized from server: /home/user/dir/file
-    string path = fullPath;
+    string full = normalizeUserPath(relativePath);
 
-    // Extract directory + filename
-    size_t lastSlash = path.find_last_of('/');
-    string dirPart = (lastSlash != string::npos) ? path.substr(0, lastSlash) : "";
-    string fileName = (lastSlash != string::npos) ? path.substr(lastSlash + 1) : path;
+    // Parent directory
+    size_t pos = full.find_last_of('/');
+    string parent = full.substr(0, pos);
+    string fileName = full.substr(pos + 1);
 
-    // Ensure intermediate directories exist
-    if (!dirPart.empty())
-        dirTree.createDirectory("/", dirPart.substr(1));  // safe
+    // Ensure directory exists using your logic
+    dirTree.createDirectoryRecursive(parent);
 
-    // Write content
-    if (writeFileContent(path, content)) {
-        dirTree.createFile(dirPart, fileName, content);
-        cout << "✅ File created successfully at: " << path << endl;
+    // Write the content
+    if (writeFileContent("/" + full.substr(6 + session->getCurrentUser().size()), content)) {
+
+        // Register inside directory tree
+        dirTree.createFile(parent, fileName, content);
+
+        cout << "✅ File created successfully at: " << full << endl;
+
     } else {
-        cerr << "❌ Failed to create file at: " << path << endl;
+        cerr << "❌ Failed to create file at: " << full << endl;
     }
 }
+
+
+
+// void createFile(const string& fullPath, const string& content) {
+//     if (!session || !session->isLoggedIn()) {
+//         cerr << "❌ Login required to create file.\n";
+//         return;
+//     }
+
+//     // ✔ fullPath already normalized from server: /home/user/dir/file
+//     string path = fullPath;
+
+//     // Extract directory + filename
+//     size_t lastSlash = path.find_last_of('/');
+//     string dirPart = (lastSlash != string::npos) ? path.substr(0, lastSlash) : "";
+//     string fileName = (lastSlash != string::npos) ? path.substr(lastSlash + 1) : path;
+
+//     // Ensure intermediate directories exist
+//     if (!dirPart.empty())
+//         dirTree.createDirectory("/", dirPart.substr(1));  // safe
+
+//     // Write content
+//     if (writeFileContent(path, content)) {
+//         dirTree.createFile(dirPart, fileName, content);
+//         cout << "✅ File created successfully at: " << path << endl;
+//     } else {
+//         cerr << "❌ Failed to create file at: " << path << endl;
+//     }
+// }
 
 
 // void createFile(const string& relativePath, const string& content) {
@@ -818,15 +889,16 @@ void createFile(const string& fullPath, const string& content) {
 // =============================================================
 
 
-bool deleteFile(const string& fullPath) {
+bool deleteFile(const string& relPath) {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Login required to delete files.\n";
         return false;
     }
 
-    string path = fullPath;  // ✔ Already normalized
+    string full = normalizeUserPath(relPath);
 
-    if (dirTree.deleteFile(path)) {
+    if (dirTree.deleteFile(full)) {
+
         vector<FileEntry> entries;
         dirTree.exportToEntries(entries);
 
@@ -836,10 +908,11 @@ bool deleteFile(const string& fullPath) {
         fileManager.closeFile();
 
         updateStats();
+        cout << "🗑️  File deleted: " << full << endl;
         return true;
     }
 
-    cerr << "❌ File not found: " << path << endl;
+    cerr << "❌ File not found: " << full << endl;
     return false;
 }
 
@@ -869,19 +942,44 @@ bool deleteDirectory(const string& relPath) {
         cerr << "❌ Login required to delete directories.\n";
         return false;
     }
-    string username = session->getCurrentUser();
-    string fullPath = "/home/" + username + relPath;
-    if (dirTree.deleteDirectoryRecursive(fullPath)) {
-        // persist change
+
+    string full = normalizeUserPath(relPath);
+
+    if (dirTree.deleteDirectoryRecursive(full)) {
+
         vector<FileEntry> entries;
         dirTree.exportToEntries(entries);
+
         fileManager.openFile(omniFileName, 4096);
-        fileManager.writeFileEntries(entries, header.header_size + (10 * sizeof(UserInfo)) + totalBlocks);
+        fileManager.writeFileEntries(entries,
+            header.header_size + (10 * sizeof(UserInfo)) + totalBlocks);
         fileManager.closeFile();
+
         updateStats();
+        cout << "🗑️  Directory deleted: " << full << endl;
         return true;
     }
+
+    cerr << "❌ Directory not found: " << full << endl;
     return false;
+}
+
+// -------------------------------------------
+// Normalize any user-relative path to:
+// /home/<username>/<clean/path>
+// -------------------------------------------
+string normalizeUserPath(const string& relPath) {
+    if (!session || !session->isLoggedIn())
+        return "";
+
+    string username = session->getCurrentUser();
+    string clean = relPath;
+
+    // remove leading slash
+    if (!clean.empty() && clean[0] == '/')
+        clean = clean.substr(1);
+
+    return "/home/" + username + "/" + clean;
 }
 
 
