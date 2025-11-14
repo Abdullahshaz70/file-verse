@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <limits>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -167,6 +168,11 @@ int start_client() {
         default:
             cout << "⚠ Invalid choice\n";
         }
+
+        cin.clear();
+        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+
     }
 
     close(sock);

@@ -115,6 +115,7 @@ public:
         return;
     }
 
+
     cout << "🧹 Formatting OFS...\n";
     spaceManager.reset();
     dirTree.reset();
@@ -262,67 +263,6 @@ public:
     return true;
 }
 
-//   bool writeFileContent(const string& filePath, const string& fileData) {
-//     if (!session || !session->isLoggedIn()) {
-//         cerr << "❌ Access Denied: You must be logged in to write files.\n";
-//         return false;
-//     }
-//     if (dataStartOffset == 0) {
-//     cerr << "⚠️ Data region offset is not initialized. Load or format the OFS first (option 2 or 1).\n";
-//     return false;
-// }
-
-
-//     string username = session->getCurrentUser();
-//     string userDir = "/home/" + username;
-//     string actualPath = userDir + filePath;  
-
-
-
-
-//     cout << "✏️ Writing file content as user: " << username << endl;
-//     cout << "📁 Target path: " << actualPath << endl;
-
-//     if (!fileManager.openFile(omniFileName, 4096)) {
-//         cerr << "❌ Could not open .omni for write.\n";
-//         return false;
-//     }
-
-//     const uint64_t blockSize = 4096;
-
-//     int blockIndex = spaceManager.allocateBlock();
-//     if (blockIndex == -1) {
-//         cerr << "❌ No free space available.\n";
-//         fileManager.closeFile();
-//         return false;
-//     }
-
-//     vector<char> buffer(fileData.begin(), fileData.end());
-//     if (!fileManager.writeFileData(dataStartOffset, blockIndex, blockSize, buffer)) {
-//         cerr << "❌ Failed to write file data.\n";
-//         fileManager.closeFile();
-//         return false;
-//     }
-
-//     cout << "💾 Wrote " << buffer.size() << " bytes to block #" << blockIndex
-//          << " (offset " << (dataStartOffset + static_cast<uint64_t>(blockIndex) * blockSize) << ")\n";
-
-
-//     vector<bool> freeMap = spaceManager.getMap();
-//     const uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
-//     fileManager.writeFreeMap(freeMap, freeMapOffset);
-
-//     updateStats();
-//     session->recordOperation();
-
-
-//     saveFileVersion(filePath, blockIndex);
-
-//     fileManager.closeFile();
-//     cout << "✅ File stored successfully by user: " << username << "\n";
-//     return true;
-// }
-
     
 // =============================================================
 // 📂 LOAD EXISTING SYSTEM (Fully Persistent Version)
@@ -437,7 +377,6 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
 
         if (userManager->addUser(username, password, isAdmin)) {
             cout << "✅ User '" << username << "' created successfully.\n";
-
             for (auto& u : userTable) {
                 if (!u.is_active) {
                     strncpy(u.username, username.c_str(), sizeof(u.username) - 1);
@@ -448,6 +387,7 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
                     break;
                 }
             }
+
 
             fileManager.openFile(omniFileName, 4096);
             fileManager.saveUsers(userTable, userTableOffset);
@@ -730,24 +670,6 @@ void createDirectory(const string& path) {
 }
 
 
-// void createDirectory(const string& path) {
-//     if (!session || !session->isLoggedIn()) {
-//         cerr << "❌ Login required to create directory.\n";
-//         return;
-//     }
-
-//     string username = session->getCurrentUser();
-//     string cleanPath = (path[0] == '/') ? path.substr(1) : path;
-//     string base = "/home/" + username;
-//     string fullPath = base + "/" + cleanPath;
-
-//     if (dirTree.createDirectory(base, cleanPath)) {
-//         cout << "📁 Directory created at: " << fullPath << endl;
-//     } else {
-//         cerr << "⚠️ Failed to create directory at " << fullPath << endl;
-//     }
-// }
-
 
 
 
@@ -788,64 +710,6 @@ void createFile(const string& relativePath, const string& content) {
 
 
 
-// void createFile(const string& fullPath, const string& content) {
-//     if (!session || !session->isLoggedIn()) {
-//         cerr << "❌ Login required to create file.\n";
-//         return;
-//     }
-
-//     // ✔ fullPath already normalized from server: /home/user/dir/file
-//     string path = fullPath;
-
-//     // Extract directory + filename
-//     size_t lastSlash = path.find_last_of('/');
-//     string dirPart = (lastSlash != string::npos) ? path.substr(0, lastSlash) : "";
-//     string fileName = (lastSlash != string::npos) ? path.substr(lastSlash + 1) : path;
-
-//     // Ensure intermediate directories exist
-//     if (!dirPart.empty())
-//         dirTree.createDirectory("/", dirPart.substr(1));  // safe
-
-//     // Write content
-//     if (writeFileContent(path, content)) {
-//         dirTree.createFile(dirPart, fileName, content);
-//         cout << "✅ File created successfully at: " << path << endl;
-//     } else {
-//         cerr << "❌ Failed to create file at: " << path << endl;
-//     }
-// }
-
-
-// void createFile(const string& relativePath, const string& content) {
-//     if (!session || !session->isLoggedIn()) {
-//         cerr << "❌ Login required to create file.\n";
-//         return;
-//     }
-
-//     string username = session->getCurrentUser();
-//     string cleanPath = (relativePath[0] == '/') ? relativePath.substr(1) : relativePath;
-//     string base = "/home/" + username;
-//     string fullPath = base + "/" + cleanPath;
-
-//     // Ensure all intermediate directories exist
-//     size_t lastSlash = cleanPath.find_last_of('/');
-// string dirPart = (lastSlash != string::npos) ? cleanPath.substr(0, lastSlash) : "";
-// if (!dirPart.empty())
-//     dirTree.createDirectory(base, dirPart);
-
-
-//     // Write file data to .omni
-//     if (writeFileContent("/" + cleanPath, content)) {
-//         // ✅ Add file node in the in-memory directory tree
-//         string dirPart = (lastSlash != string::npos) ? cleanPath.substr(0, lastSlash) : "";
-//         string fileName = (lastSlash != string::npos) ? cleanPath.substr(lastSlash + 1) : cleanPath;
-//         dirTree.createFile(base + "/" + dirPart, fileName, content);
-
-//         cout << "✅ File created successfully at: " << fullPath << endl;
-//     } else {
-//         cerr << "❌ Failed to create file at: " << fullPath << endl;
-//     }
-// }
 
     // =============================================================
     // 🌳 Show current user's directory tree
@@ -981,6 +845,9 @@ string normalizeUserPath(const string& relPath) {
 
     return "/home/" + username + "/" + clean;
 }
+
+
+
 
 
 

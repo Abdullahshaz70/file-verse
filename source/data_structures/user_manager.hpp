@@ -23,6 +23,7 @@ struct UserNode
     UserNode(const string& _username, const string& _password, bool _isAdmin)
     :left(nullptr),right(nullptr) , userName(_username) , password(_password) , isAdmin(_isAdmin) , height(1){}
 
+
 };
 
 class UserManager{
@@ -204,12 +205,28 @@ class UserManager{
         delete node;
     }
 
+
+    void fillUsers(UserNode* node, vector<string>& users) {
+        if (!node) return;
+
+        fillUsers(node->left, users);
+        users.push_back(node->userName);
+        fillUsers(node->right, users);
+    }
+
+
 public:
     UserManager():root(nullptr){}
     ~UserManager(){
         // cout << "[Debug] UserManager destructor called\n";
         deleteTree(root);
     }
+    vector<string> getAllUsers() {
+        vector<string> users;
+        fillUsers(root, users);
+        return users;
+    }
+
 
     string hashPassword(const string& password) {
         unsigned char hash[SHA256_DIGEST_LENGTH];
