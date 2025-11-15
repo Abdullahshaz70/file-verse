@@ -239,16 +239,6 @@ public:
     }
  
 
-    // bool addUser(const string& username, const std::string& password, bool isAdmin){
-
-    //     if(isPresent(root , username)){
-    //         cout<<"Username is Already Registered"<<endl;
-    //         return false;
-    //     }
-
-    //     root = insertNode(root ,username , password , isAdmin);
-    //     return true;
-    // }
 
     bool addUser(const string& username, const string& password, bool isAdmin) {
         if (isPresent(root, username)) {
@@ -264,11 +254,7 @@ public:
     }
 
 
-    // bool authenticate(const string& username, const string& password){
-    //     UserNode* user = isPresent(root , username);
-    //     return (user && user->password == password);
-    // }
-    
+
     bool authenticate(const string& username, const string& password) {
     UserNode* user = isPresent(root, username);
     if (!user) {

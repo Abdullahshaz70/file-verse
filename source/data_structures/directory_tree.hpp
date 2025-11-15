@@ -5,7 +5,7 @@
 #include<algorithm>
 #include<vector>
 
-// #include "core/odf_types.hpp"
+
 #include "../include/core/odf_types.hpp"
 
 
@@ -77,10 +77,8 @@ public:
     if (!current) return false;
 
     for (const string& part : parts) {
-        // Skip empty parts
         if (part.empty()) continue;
 
-        // Check if directory already exists
         FileNode* next = nullptr;
         for (auto* c : current->children) {
             if (!c->isFile && c->name == part) {
@@ -134,11 +132,10 @@ public:
     }
 
 
-    // Wrapper: create all directory levels automatically
+
 bool createDirectoryRecursive(const string& fullPath) {
     if (fullPath.empty()) return false;
 
-    // Extract base path: everything before last '/'
     size_t pos = fullPath.find_last_of('/');
     if (pos == string::npos) return false;
 
@@ -148,11 +145,6 @@ bool createDirectoryRecursive(const string& fullPath) {
     return createDirectory(base, rel);
 }
 
-
-
-    // =============================================================
-// 🗑️ DELETE FILE OR DIRECTORY (Recursive)
-// =============================================================
 
 bool deleteFile(const string& fullPath) {
     FileNode* node = findNodeByPath(fullPath);
@@ -204,9 +196,7 @@ bool deleteDirectoryRecursive(const string& dirPath) {
 }
 
 
-    // ===============================
-    // 🧩 Clean recursive print function
-    // ===============================
+
     void printTree(FileNode* node, int depth = 0) const {
         if (!node) return;
 
@@ -217,7 +207,6 @@ bool deleteDirectoryRecursive(const string& dirPath) {
         else
             cout << "📁 " << node->name << endl;
 
-        // Sort children so output is consistent
         vector<FileNode*> sorted = node->children;
         sort(sorted.begin(), sorted.end(),
              [](FileNode* a, FileNode* b) { return a->name < b->name; });
@@ -226,7 +215,7 @@ bool deleteDirectoryRecursive(const string& dirPath) {
             printTree(child, depth + 1);
     }
 
-    // For listing directory contents (non-recursive)
+    
     void list(const string& path) {
         if (!root) {
             cout << "❌ No file system initialized.\n";
@@ -261,9 +250,7 @@ bool deleteDirectoryRecursive(const string& dirPath) {
         root = new FileNode("root", false, nullptr);
     }
 
-    // ==========================================
-    // 🏠 User-based directory helpers
-    // ==========================================
+
     bool ensureHomeBase() {
         FileNode* home = findNodeByPath("/home");
         if (!home) return createDirectory("/", "home");
@@ -277,7 +264,7 @@ bool deleteDirectoryRecursive(const string& dirPath) {
         return createDirectory("/home", username);
     }
 
-    // Clean version — no duplicate subpaths
+    
     void listUserFiles(const string& username) {
         FileNode* home = findNodeByPath("/home/" + username);
         if (!home) {
@@ -294,14 +281,10 @@ bool deleteDirectoryRecursive(const string& dirPath) {
     }
 
 
-// =============================================================
-// 📤 EXPORT (skip the artificial "root" node in paths)
-// =============================================================
 void exportToEntries(vector<FileEntry>& entries) {
     if (!root) return;
-    // do NOT push "root" itself
     for (auto* child : root->children) {
-        exportNode(child, "/", entries); // start at "/" directly
+        exportNode(child, "/", entries); 
     }
 }
 
@@ -326,9 +309,6 @@ void exportNode(FileNode* node, const string& path, vector<FileEntry>& entries) 
     }
 }
 
-    // =============================================================
-// 📥 IMPORT (normalize any old '/root' prefix)
-// =============================================================
 void importFromEntries(const vector<FileEntry>& entries) {
     reset();
 

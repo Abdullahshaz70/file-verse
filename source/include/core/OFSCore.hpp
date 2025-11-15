@@ -69,9 +69,8 @@ public:
         dirTree.createUserHome("admin");
     }
 
-    // =============================================================
-    // 💾 SAVE SYSTEM STATE — called before program exit
-    // =============================================================
+    
+    
     void saveSystem() {
         if (!isInitialized) return;
 
@@ -81,17 +80,17 @@ public:
             return;
         }
 
-        // 1️⃣ Export directory entries
+
         vector<FileEntry> entries;
         dirTree.exportToEntries(entries);
         const uint64_t metaOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo)) + totalBlocks;
         fileManager.writeFileEntries(entries, metaOffset);
 
-        // 2️⃣ Save free map
+        
         const uint64_t freeMapOffset = sizeof(OMNIHeader) + (10 * sizeof(UserInfo));
         fileManager.writeFreeMap(spaceManager.getMap(), freeMapOffset);
 
-        // 3️⃣ Save user table
+        
         fileManager.saveUsers(userTable, userTableOffset);
 
         fileManager.closeFile();
@@ -106,9 +105,7 @@ public:
 
     void attachSession(SessionManager* s) { session = s; }
 
-    // ==============================
-    // 🧾 FORMAT
-    // ==============================
+   
    void format() {
     if (!session || !session->isActive() || !session->isAdminUser()) {
         cerr << "❌ Access Denied: Please log in as an Admin to format the system.\n";
@@ -208,9 +205,7 @@ public:
 
 }
 
-    // ==============================
-    // ✏️ WRITE FILE (fixed path)
-    // ==============================
+  
 
     bool writeFileContent(const string& filePath, const string& fileData) {
     if (!session || !session->isLoggedIn()) {
@@ -222,7 +217,7 @@ public:
         return false;
     }
 
-    string actualPath = filePath;  // ✔ Already normalized by server
+    string actualPath = filePath;  
 
     cout << "✏️ Writing file content as user: " << session->getCurrentUser() << endl;
     cout << "📁 Target path: " << actualPath << endl;
@@ -263,10 +258,7 @@ public:
     return true;
 }
 
-    
-// =============================================================
-// 📂 LOAD EXISTING SYSTEM (Fully Persistent Version)
-// =============================================================
+
 bool loadSystem() {
     cout << "\nLoading OFS from " << omniFileName << "...\n";
     if (!fileManager.openFile(omniFileName, 4096)) {
@@ -322,10 +314,10 @@ bool loadSystem() {
 
 
 
-    // Ensure base directory exists
+
     dirTree.ensureHomeBase();
 
-    // Ensure each active user has a home directory
+    
     for (auto& u : userTable) {
         if (u.is_active && strlen(u.username) > 0)
             dirTree.createUserHome(u.username);
@@ -335,9 +327,7 @@ bool loadSystem() {
     return true;
 }
 
-   // =============================================================
-// 📖 READ FILE CONTENT (prints actual file text)
-// =============================================================
+ 
 bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Access Denied: You must be logged in to read files.\n";
@@ -366,9 +356,7 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
     return true;
 }
 
-    // ==============================
-    // 👥 USER CREATION
-    // ==============================
+   
     void createUser(const string& username, const string& password, bool isAdmin) {
         if (!session || !session->isAdminUser()) {
             cerr << "❌ Access Denied: Only Admin can create new users.\n";
@@ -401,9 +389,7 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
         }
     }
 
-    // =============================================================
-    // 📜 LIST VERSIONS
-    // =============================================================
+
     void listVersions() {
         fileManager.openFile(omniFileName, 4096);
         vector<VersionBlock> versions;
@@ -423,10 +409,6 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
     }
 
 
-
-     // =============================================================
-    // 🪶 CHANGE LOG SYSTEM
-    // =============================================================
     void logChange(const string& path, const string& user, const string& action, uint64_t versionID) {
         fileManager.openFile(omniFileName, 4096);
         ChangeLogEntry entry{};
@@ -454,9 +436,7 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
                      << " | " << ctime((time_t*)&e.timestamp);
     }
 
-    // =============================================================
-    // 🔁 REVERT TO OLD VERSION
-    // =============================================================
+  
     void revertToVersion(uint64_t versionID) {
         vector<VersionBlock> versions;
         fileManager.openFile(omniFileName, 4096);
@@ -474,13 +454,8 @@ bool readFileContent(uint32_t blockIndex, uint32_t dataLength = 256) {
         cout << "❌ Version ID not found.\n";
     }
 
-
-
-// =============================================================
-// 🧾 SAVE NEW FILE VERSION  (fixed header read issue)
-// =============================================================
 void saveFileVersion(const string& path, uint32_t blockIndex) {
-    // Open file cleanly for version append
+    
     if (!fileManager.openFile(omniFileName, 4096)) {
         cerr << "❌ Could not open .omni to save version.\n";
         return;
@@ -488,7 +463,7 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
 
     OMNIHeader current{};
     
-    // ✅ Read header directly from start (without reopening or clearing stream)
+    
     fileManager.seekToStart();
     fileManager.File().read(reinterpret_cast<char*>(&current), sizeof(OMNIHeader));
     if (strncmp(current.magic, "OMNIFS01", 8) != 0) {
@@ -497,14 +472,14 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
         return;
     }
 
-    // --- Load existing versions safely ---
+    
     vector<VersionBlock> existing;
     fileManager.readAllVersions(existing, current.file_state_storage_offset);
 
     uint64_t versionOffset =
         current.file_state_storage_offset + (existing.size() * sizeof(VersionBlock));
 
-    // --- Prepare version record ---
+   
     VersionBlock vb{};
     memset(&vb, 0, sizeof(vb));
     strncpy(vb.filePath, path.c_str(), sizeof(vb.filePath) - 1);
@@ -513,7 +488,6 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
     vb.blockCount = 1;
     vb.timestamp  = vb.versionID;
 
-    // --- Write version record ---
     if (!fileManager.writeVersionBlock(vb, versionOffset)) {
         cerr << "❌ Failed to write version block.\n";
         fileManager.closeFile();
@@ -526,9 +500,6 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
          << " (vID " << vb.versionID << ")\n";
 }
 
-    // ==============================
-    // Session Helpers
-    // ==============================
     void loginUser(const string& user, const string& pass) {
         if (session) session->login(user, pass);
     }
@@ -544,9 +515,7 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
     UserManager& getUserManager() { return *userManager; }
 
 
-    // =============================================================
-    // 🧩 VERIFY FILE STRUCTURE
-    // =============================================================
+  
     void verifyFileStructure() {
         cout << "🧩 Verifying file structure...\n";
 
@@ -562,7 +531,7 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
             return;
         }
 
-        // --- Header Validation ---
+       
         bool headerOK = strcmp(verify.magic, "OMNIFS01") == 0;
         bool versionOK = verify.format_version == 0x00010000;
         bool blockSizeOK = verify.block_size == 4096;
@@ -580,7 +549,6 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
             return;
         }
 
-        // --- Offsets Consistency ---
         cout << "\n--- REGION OFFSETS ---\n";
         cout << "User Table Offset: " << verify.user_table_offset << endl;
         cout << "Version Storage Offset: " << verify.file_state_storage_offset << endl;
@@ -593,7 +561,6 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
             cerr << "⚠️ Change log overlaps version region!\n";
         }
 
-        // --- Users Verification ---
         vector<UserInfo> testUsers;
         if (fileManager.loadUsers(testUsers, sizeof(OMNIHeader), 10)) {
             cout << "\n--- USER TABLE (Active Entries) ---\n";
@@ -604,13 +571,13 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
                         << " | Active: " << (u.is_active ? "Yes" : "No") << endl;
         }
 
-        // --- Versions Check ---
+        
         vector<VersionBlock> versions;
         fileManager.readAllVersions(versions, verify.file_state_storage_offset);
         cout << "\n--- VERSION STORAGE ---\n";
         cout << "Total Versions: " << versions.size() << endl;
 
-        // --- Log Check ---
+       
         vector<ChangeLogEntry> log;
         fileManager.readChangeLog(log, verify.change_log_offset, 10);
         cout << "\n--- CHANGE LOG ENTRIES ---\n";
@@ -624,9 +591,7 @@ void saveFileVersion(const string& path, uint32_t blockIndex) {
     }
 
 
-    // ============================================
-// 🧭 Directory Viewing Functions
-// ============================================
+
 void listMyFiles() {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Login required to list your files.\n";
@@ -644,9 +609,6 @@ void listAllFiles() {
 }
 
 
-// =============================================================
-// 🏗️ Create a new directory for current user
-// =============================================================
 
 
 void createDirectory(const string& path) {
@@ -657,7 +619,7 @@ void createDirectory(const string& path) {
 
     string full = normalizeUserPath(path);
 
-    // Parent and directory name
+    
     size_t pos = full.find_last_of('/');
     string parent = full.substr(0, pos);
     string name   = full.substr(pos + 1);
@@ -669,13 +631,6 @@ void createDirectory(const string& path) {
     }
 }
 
-
-
-
-
-// =============================================================
-// 📝 Create a new file and write content (custom path)
-// =============================================================
 
 
 
@@ -708,12 +663,6 @@ void createFile(const string& relativePath, const string& content) {
     }
 }
 
-
-
-
-    // =============================================================
-    // 🌳 Show current user's directory tree
-    // =============================================================
     void showMyDirectoryTree() {
         if (!session || !session->isLoggedIn()) {
             cerr << "❌ Login required to view directory tree.\n";
@@ -748,10 +697,6 @@ void createFile(const string& relativePath, const string& content) {
 }
 
 
-// =============================================================
-// 🗑️ DELETE FILE OR DIRECTORY (PUBLIC WRAPPERS)
-// =============================================================
-
 
 bool deleteFile(const string& relPath) {
     if (!session || !session->isLoggedIn()) {
@@ -781,26 +726,6 @@ bool deleteFile(const string& relPath) {
 }
 
 
-// bool deleteFile(const string& relPath) {
-//     if (!session || !session->isLoggedIn()) {
-//         cerr << "❌ Login required to delete files.\n";
-//         return false;
-//     }
-//     string username = session->getCurrentUser();
-//     string fullPath = "/home/" + username + relPath;
-//     if (dirTree.deleteFile(fullPath)) {
-//         // persist change
-//         vector<FileEntry> entries;
-//         dirTree.exportToEntries(entries);
-//         fileManager.openFile(omniFileName, 4096);
-//         fileManager.writeFileEntries(entries, header.header_size + (10 * sizeof(UserInfo)) + totalBlocks);
-//         fileManager.closeFile();
-//         updateStats();
-//         return true;
-//     }
-//     return false;
-// }
-
 bool deleteDirectory(const string& relPath) {
     if (!session || !session->isLoggedIn()) {
         cerr << "❌ Login required to delete directories.\n";
@@ -828,10 +753,7 @@ bool deleteDirectory(const string& relPath) {
     return false;
 }
 
-// -------------------------------------------
-// Normalize any user-relative path to:
-// /home/<username>/<clean/path>
-// -------------------------------------------
+
 string normalizeUserPath(const string& relPath) {
     if (!session || !session->isLoggedIn())
         return "";
@@ -839,7 +761,6 @@ string normalizeUserPath(const string& relPath) {
     string username = session->getCurrentUser();
     string clean = relPath;
 
-    // remove leading slash
     if (!clean.empty() && clean[0] == '/')
         clean = clean.substr(1);
 

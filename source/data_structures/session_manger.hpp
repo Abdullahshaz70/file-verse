@@ -19,14 +19,12 @@ struct Session {
 class SessionManager {
 private:
     Session current;
-    UserManager* userManager;   // Pointer to UserManager tree
+    UserManager* userManager;   
 
 public:
     SessionManager(UserManager* um) : userManager(um) {}
 
-    // -------------------------------
-    // LOGIN + LOGOUT
-    // -------------------------------
+    
     bool login(const string& username, const string& password) {
         if (userManager->authenticate(username, password)) {
             UserNode* node = userManager->getRoot();
@@ -57,14 +55,11 @@ public:
         }
     }
 
-    // -------------------------------
-    // OPERATIONS + STATUS
-    // -------------------------------
+   
     void recordOperation() {
         if (current.active) current.operations++;
     }
 
-    // --- NEW Helper Accessors (used by OFSCore) ---
     bool isLoggedIn() const { return current.active; }
     bool isAdmin() const { return current.active && current.isAdmin; }
     string getActiveUsername() const { return current.active ? current.username : "None"; }
@@ -76,7 +71,7 @@ string getCurrentUser() const { return current.active ? current.username : "None
 
 
 
-    // Optional: used to show current user info
+
     void printSession() const {
         if (!current.active) {
             cout << "No active session.\n";
