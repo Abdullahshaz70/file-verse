@@ -1,0 +1,20 @@
+server
+
+g++ \
+    source/server_main.cpp \
+    -I source/include/core \
+    -I source \
+    -I source/data_structures \
+    -pthread -lssl -lcrypto \
+    -o ofs_server
+    
+    
+    
+c;lient
+g++ \
+    source/client_main.cpp \
+    -I source/include/core \
+    -I source \
+    -I source/data_structures \
+    -pthread -lssl -lcrypto \
+    -o ofs_client
