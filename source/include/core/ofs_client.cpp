@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -11,7 +10,7 @@
 
 using namespace std;
 
-static const int SERVER_PORT = 9090;
+static const int SERVER_PORT = 19090;
 static const char* SERVER_IP = "127.0.0.1";
 
 string sendCommand(int sock, const string &cmd) {
@@ -64,13 +63,15 @@ int start_client() {
              << "18. Show my directory tree\n"
              << "19. Delete file\n"
              << "20. Delete directory\n"
+             << "21. Truncate (Delete & Overwrite) **NEW**\n"
              << "0. Quit\n"
              << "=================================\n"
              << "Enter choice: ";
 
         int choice;
         cin >> choice;
-        cin.ignore();
+        // Fix for input buffer issues
+        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
 
         if (choice == 0) {
             cout << sendCommand(sock, "QUIT");
@@ -165,14 +166,15 @@ int start_client() {
             cout << sendCommand(sock, "DELETE_DIR|" + a);
             break;
 
+        case 21: 
+            cout << "File path to truncate: ";
+            getline(cin, a);
+            cout << sendCommand(sock, "TRUNCATE|" + a);
+            break;
+
         default:
             cout << "⚠ Invalid choice\n";
         }
-
-        cin.clear();
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-
     }
 
     close(sock);

@@ -374,7 +374,7 @@ int main567890() {
 }
 
 
-int main4() {
+int main() {
     cout << "=============================\n";
     cout << "📂 Omni File System — Multi-Directory & File Read Test\n";
     cout << "=============================\n\n";
